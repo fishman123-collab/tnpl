@@ -280,7 +280,7 @@
         </div>
     </div>
 
-    <script>
+<script>
         // ⚠️ 請替換為您的 LIFF ID
         const LIFF_ID = "2008914129-7KGP9Yxy"; 
         // ⚠️ 請替換為您剛剛部署的 GAS 網頁應用程式 URL
@@ -300,6 +300,9 @@
         const resultDistance = document.getElementById('resultDistance');
         const resultCloseBtn = document.getElementById('resultCloseBtn');
 
+        // 📍 修正點 1：新增全域變數來儲存 userId
+        let currentUserId = "";
+
         // 1. 初始化 LIFF
         async function initializeLiff() {
             try {
@@ -310,7 +313,9 @@
                 }
                 const profile = await liff.getProfile();
                 
-                // 📍 UX 提升：顯示志工資料
+                // 📍 修正點 2：將抓到的 userId 存入全域變數
+                currentUserId = profile.userId;
+                
                 userAvatar.src = profile.pictureUrl;
                 userName.innerText = profile.displayName;
                 profileCard.style.visibility = "visible";
@@ -336,7 +341,9 @@
                         const lng = position.coords.longitude;
                         btnText.innerText = "傳送中...";
                         statusMsg.innerText = "定位成功，正在傳送打卡資料...";
-                        sendDataToGAS(profile.userId, lat, lng);
+                        
+                        // 📍 修正點 3：這裡改用 currentUserId 傳送
+                        sendDataToGAS(currentUserId, lat, lng);
                     },
                     (error) => {
                         showResult(false, "定位失敗", "請確認已開啟手機及 LINE 的位置權限。");
@@ -362,7 +369,6 @@
             .then(response => response.json())
             .then(result => {
                 if(result.status === "success") {
-                    // 📍 UX 提升：漂亮的成功提示
                     showResult(true, "打卡成功！", result.message);
                     btn.classList.add('success'); 
                     resetBtn();
