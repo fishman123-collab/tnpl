@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>志工定位打卡系統</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px 20px; }
+        button { padding: 15px 30px; font-size: 18px; background-color: #00B900; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        button:disabled { background-color: #cccccc; }
+        #status { margin-top: 20px; color: #555; }
+    </style>
+</head>
+<body>
+
+    <h2>📍 志工打卡</h2>
+    <button id="checkInBtn" disabled>系統載入中...</button>
+    <div id="status">正在初始化 LIFF...</div>
+
+    <script>
+        // ⚠️ 請替換為您的 LIFF ID
+        const LIFF_ID = "2008914129-7KGP9Yxy"; 
+        // ⚠️ 請替換為您剛剛部署的 GAS 網頁應用程式 URL
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
+
+        const btn = document.getElementById('checkInBtn');
+        const statusDiv = document.getElementById('status');
+        let currentUserId = "";
+
+        // 1. 初始化 LIFF
+        async function initializeLiff() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login(); // 如果沒登入，引導登入
+                    return;
+                }
+                const profile = await liff.getProfile();
+                currentUserId = profile.userId;
+                
+                btn.innerText = "點我進行定位打卡";
+                btn.disabled = false;
+                statusDiv.innerText = `您好，${profile.displayName}！準備就緒。`;
+            } catch (err) {
+                statusDiv.innerText = "LIFF 初始化失敗：" + err.message;
+            }
+        }
+
+        // 2. 按鈕點擊事件：取得定位並發送資料
+        btn.addEventListener('click', () => {
+            btn.disabled = true;
+            statusDiv.innerText = "正在取得您的 GPS 定位，請稍候...";
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        statusDiv.innerText = `定位成功！正在紀錄資料...\n(緯度: ${lat.toFixed(4)}, 經度: ${lng.toFixed(4)})`;
+                        sendDataToGAS(lat, lng);
+                    },
+                    (error) => {
+                        statusDiv.innerText = "無法取得定位，請確認已開啟手機及 LINE 的位置權限。";
+                        btn.disabled = false;
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                statusDiv.innerText = "您的裝置不支援定位功能。";
+            }
+        });
+
+        // 3. 將資料傳送至 GAS
+        function sendDataToGAS(lat, lng) {
+            const postData = {
+                userId: currentUserId,
+                lat: lat,
+                lng: lng
+            };
+
+            fetch(GAS_URL, {
+                method: "POST",
+                // 注意：跨域請求通常使用 text/plain 來避免 preflight 錯誤，GAS 後端用 JSON.parse 解析即可
+                headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+                body: JSON.stringify(postData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if(result.status === "success") {
+                    statusDiv.innerText = "✅ 打卡成功！您可以關閉此視窗。";
+                    statusDiv.style.color = "green";
+                } else {
+                    statusDiv.innerText = "❌ 打卡失敗：" + result.message;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                statusDiv.innerText = "❌ 網路連線錯誤，請重試。";
+                btn.disabled = false;
+            });
+        }
+
+        // 啟動程式
+        initializeLiff();
+    </script>
+</body>
+</html>
