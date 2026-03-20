@@ -300,7 +300,6 @@
         const resultDistance = document.getElementById('resultDistance');
         const resultCloseBtn = document.getElementById('resultCloseBtn');
 
-        // 📍 修正點 1：新增全域變數來儲存 userId
         let currentUserId = "";
 
         // 1. 初始化 LIFF
@@ -313,7 +312,6 @@
                 }
                 const profile = await liff.getProfile();
                 
-                // 📍 修正點 2：將抓到的 userId 存入全域變數
                 currentUserId = profile.userId;
                 
                 userAvatar.src = profile.pictureUrl;
@@ -342,7 +340,6 @@
                         btnText.innerText = "傳送中...";
                         statusMsg.innerText = "定位成功，正在傳送打卡資料...";
                         
-                        // 📍 修正點 3：這裡改用 currentUserId 傳送
                         sendDataToGAS(currentUserId, lat, lng);
                     },
                     (error) => {
@@ -369,7 +366,14 @@
             .then(response => response.json())
             .then(result => {
                 if(result.status === "success") {
-                    showResult(true, "打卡成功！", result.message);
+                    // 📍 新增：取得手機當下的時間並格式化為 24 小時制 (例如：14:30:05)
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('zh-TW', { hour12: false }); 
+                    
+                    // 📍 新增：將時間加入原本的訊息中
+                    const successMsg = result.message + "\n⏰ 打卡時間：" + timeString;
+                    
+                    showResult(true, "打卡成功！", successMsg);
                     btn.classList.add('success'); 
                     resetBtn();
                 } else {
@@ -387,9 +391,12 @@
         function showResult(isSuccess, title, message) {
             resultIcon.innerText = isSuccess ? "✅" : "❌";
             resultStatus.innerText = title;
+            // 📍 新增：讓文字強制套用換行符號
+            resultDistance.style.whiteSpace = "pre-line"; 
             resultDistance.innerText = message;
             resultOverlay.classList.add('show');
-            statusMsg.innerText = isSuccess ? "✅ 打卡成功！" : "❌ 打卡失敗：" + message;
+            statusMsg.style.whiteSpace = "pre-line";
+            statusMsg.innerText = isSuccess ? "✅ 打卡成功！\n" + message : "❌ 打卡失敗：\n" + message;
         }
 
         // 輔助：關閉結果視窗
