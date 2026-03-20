@@ -354,7 +354,21 @@
                 statusMsg.innerText = "LIFF 初始化失敗：" + err.message;
             }
         }
-
+// 📍 新增：當選擇簽退時，鎖定服務內容選單
+        const checkTypeRadios = document.querySelectorAll('input[name="checkType"]');
+        const serviceSelect = document.getElementById('serviceSelect');
+        
+        checkTypeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === '簽退') {
+                    serviceSelect.disabled = true;
+                    serviceSelect.style.backgroundColor = "#eeeeee"; // 變灰色提示
+                } else {
+                    serviceSelect.disabled = false;
+                    serviceSelect.style.backgroundColor = "#ffffff";
+                }
+            });
+        });
         // 2. 按鈕點擊事件
         btn.addEventListener('click', () => {
             btn.disabled = true;
