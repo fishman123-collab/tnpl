@@ -2,21 +2,283 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工定位打卡系統</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>志工服務中心 - 定位打卡</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px 20px; }
-        button { padding: 15px 30px; font-size: 18px; background-color: #00B900; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        button:disabled { background-color: #cccccc; }
-        #status { margin-top: 20px; color: #555; }
+        :root {
+            --primary-color: #00B900; /* LINE Green */
+            --bg-color: #F4F7F6;
+            --text-color: #333333;
+            --secondary-text: #777777;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* 標題與標誌區塊 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+
+        .logo-placeholder {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .header p {
+            font-size: 14px;
+            margin: 5px 0 0;
+            color: var(--secondary-text);
+        }
+
+        /* 志工個人資料卡片 */
+        .profile-card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            visibility: hidden; /* 初始化完成前隱藏 */
+        }
+
+        .profile-card img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-right: 15px;
+            border: 2px solid #eaeaea;
+        }
+
+        .profile-info h2 {
+            font-size: 18px;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .profile-info p {
+            font-size: 14px;
+            margin: 3px 0 0;
+            color: var(--secondary-text);
+        }
+
+        /* 打卡動作區塊 */
+        .action-card {
+            text-align: center;
+        }
+
+        /* 現代感打卡按鈕 */
+        .checkin-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 15px rgba(0, 185, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            outline: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto;
+        }
+
+        .checkin-btn:hover {
+            box-shadow: 0 10px 20px rgba(0, 185, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .checkin-btn:active {
+            box-shadow: 0 5px 10px rgba(0, 185, 0, 0.3);
+            transform: translateY(1px);
+        }
+
+        .checkin-btn:disabled {
+            background-color: #cccccc;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .checkin-btn .icon {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+
+        /* 打卡成功的動態 */
+        .checkin-btn.success {
+            animation: successPulse 1s ease-out;
+        }
+
+        /* 狀態文字區塊 */
+        .status-area {
+            margin-top: 30px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .status-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--secondary-text);
+        }
+
+        .status-msg {
+            color: var(--secondary-text);
+        }
+
+        /* 結果跳出視窗 */
+        .result-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .result-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .result-card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            width: 80%;
+            max-width: 320px;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        .result-overlay.show .result-card {
+            transform: scale(1);
+        }
+
+        .result-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .result-status {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .result-distance {
+            font-size: 14px;
+            color: var(--secondary-text);
+            margin-bottom: 20px;
+        }
+
+        .result-close {
+            background-color: var(--text-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        @keyframes successPulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 185, 0, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(0, 185, 0, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 185, 0, 0); }
+        }
+
+        /* 蛙寶風格的可愛點綴 (隱藏) */
+        .froggy-icon {
+            display: none;
+        }
+
     </style>
 </head>
 <body>
 
-    <h2>📍 志工打卡</h2>
-    <button id="checkInBtn" disabled>系統載入中...</button>
-    <div id="status">正在初始化 LIFF...</div>
+    <div class="container">
+        <div class="header">
+            <div class="logo-placeholder">📍</div>
+            <h1>志工服務中心</h1>
+            <p>定位打卡系統</p>
+        </div>
+
+        <div class="profile-card" id="profileCard">
+            <img src="" alt="頭像" id="userAvatar">
+            <div class="profile-info">
+                <h2 id="userName">您好，志工</h2>
+                <p>準備執勤中</p>
+            </div>
+        </div>
+
+        <div class="action-card">
+            <button class="checkin-btn" id="checkInBtn" disabled>
+                <span class="icon">📍</span>
+                <span class="text">載入中...</span>
+            </button>
+        </div>
+
+        <div class="status-area">
+            <div class="status-title">📢 系統狀態</div>
+            <div class="status-msg" id="statusMsg">正在載入系統...</div>
+        </div>
+    </div>
+
+    <div class="result-overlay" id="resultOverlay">
+        <div class="result-card">
+            <div class="result-icon" id="resultIcon">✅</div>
+            <div class="result-status" id="resultStatus">打卡成功！</div>
+            <div class="result-distance" id="resultDistance">距離中心點約 -- 公尺</div>
+            <button class="result-close" id="resultCloseBtn">關閉</button>
+        </div>
+    </div>
 
     <script>
         // ⚠️ 請替換為您的 LIFF ID
@@ -25,80 +287,114 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
 
         const btn = document.getElementById('checkInBtn');
-        const statusDiv = document.getElementById('status');
-        let currentUserId = "";
+        const btnText = btn.querySelector('.text');
+        const statusMsg = document.getElementById('statusMsg');
+        const profileCard = document.getElementById('profileCard');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+
+        // 結果視窗相關
+        const resultOverlay = document.getElementById('resultOverlay');
+        const resultIcon = document.getElementById('resultIcon');
+        const resultStatus = document.getElementById('resultStatus');
+        const resultDistance = document.getElementById('resultDistance');
+        const resultCloseBtn = document.getElementById('resultCloseBtn');
 
         // 1. 初始化 LIFF
         async function initializeLiff() {
             try {
                 await liff.init({ liffId: LIFF_ID });
                 if (!liff.isLoggedIn()) {
-                    liff.login(); // 如果沒登入，引導登入
+                    liff.login(); 
                     return;
                 }
                 const profile = await liff.getProfile();
-                currentUserId = profile.userId;
                 
-                btn.innerText = "點我進行定位打卡";
+                // 📍 UX 提升：顯示志工資料
+                userAvatar.src = profile.pictureUrl;
+                userName.innerText = profile.displayName;
+                profileCard.style.visibility = "visible";
+                
+                btnText.innerText = "點我打卡";
                 btn.disabled = false;
-                statusDiv.innerText = `您好，${profile.displayName}！準備就緒。`;
+                statusMsg.innerText = "準備就緒。";
             } catch (err) {
-                statusDiv.innerText = "LIFF 初始化失敗：" + err.message;
+                statusMsg.innerText = "LIFF 初始化失敗：" + err.message;
             }
         }
 
-        // 2. 按鈕點擊事件：取得定位並發送資料
+        // 2. 按鈕點擊事件
         btn.addEventListener('click', () => {
             btn.disabled = true;
-            statusDiv.innerText = "正在取得您的 GPS 定位，請稍候...";
+            btnText.innerText = "定位中...";
+            statusMsg.innerText = "正在取得您的 GPS 定位，請稍候...";
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
-                        statusDiv.innerText = `定位成功！正在紀錄資料...\n(緯度: ${lat.toFixed(4)}, 經度: ${lng.toFixed(4)})`;
-                        sendDataToGAS(lat, lng);
+                        btnText.innerText = "傳送中...";
+                        statusMsg.innerText = "定位成功，正在傳送打卡資料...";
+                        sendDataToGAS(profile.userId, lat, lng);
                     },
                     (error) => {
-                        statusDiv.innerText = "無法取得定位，請確認已開啟手機及 LINE 的位置權限。";
-                        btn.disabled = false;
+                        showResult(false, "定位失敗", "請確認已開啟手機及 LINE 的位置權限。");
+                        resetBtn();
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             } else {
-                statusDiv.innerText = "您的裝置不支援定位功能。";
+                showResult(false, "功能不支援", "您的裝置不支援定位功能。");
+                resetBtn();
             }
         });
 
         // 3. 將資料傳送至 GAS
-        function sendDataToGAS(lat, lng) {
-            const postData = {
-                userId: currentUserId,
-                lat: lat,
-                lng: lng
-            };
+        function sendDataToGAS(userId, lat, lng) {
+            const postData = { userId: userId, lat: lat, lng: lng };
 
             fetch(GAS_URL, {
                 method: "POST",
-                // 注意：跨域請求通常使用 text/plain 來避免 preflight 錯誤，GAS 後端用 JSON.parse 解析即可
                 headers: { "Content-Type": "text/plain;charset=utf-8" }, 
                 body: JSON.stringify(postData)
             })
             .then(response => response.json())
             .then(result => {
                 if(result.status === "success") {
-                    statusDiv.innerText = "✅ 打卡成功！您可以關閉此視窗。";
-                    statusDiv.style.color = "green";
+                    // 📍 UX 提升：漂亮的成功提示
+                    showResult(true, "打卡成功！", result.message);
+                    btn.classList.add('success'); 
+                    resetBtn();
                 } else {
-                    statusDiv.innerText = "❌ 打卡失敗：" + result.message;
-                    btn.disabled = false;
+                    showResult(false, "打卡失敗", result.message);
+                    resetBtn();
                 }
             })
             .catch(error => {
-                statusDiv.innerText = "❌ 網路連線錯誤，請重試。";
-                btn.disabled = false;
+                showResult(false, "網路錯誤", "❌ 網路連線錯誤，請重試。");
+                resetBtn();
             });
+        }
+
+        // 輔助：顯示結果視窗
+        function showResult(isSuccess, title, message) {
+            resultIcon.innerText = isSuccess ? "✅" : "❌";
+            resultStatus.innerText = title;
+            resultDistance.innerText = message;
+            resultOverlay.classList.add('show');
+            statusMsg.innerText = isSuccess ? "✅ 打卡成功！" : "❌ 打卡失敗：" + message;
+        }
+
+        // 輔助：關閉結果視窗
+        resultCloseBtn.addEventListener('click', () => {
+            resultOverlay.classList.remove('show');
+        });
+
+        // 輔助：重設按鈕狀態
+        function resetBtn() {
+            btn.disabled = false;
+            btnText.innerText = "點我打卡";
         }
 
         // 啟動程式
