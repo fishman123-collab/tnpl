@@ -202,9 +202,16 @@
             transform: scale(1);
         }
 
-        .result-icon {
-            font-size: 60px;
+        /* 📍 修正：對圖片型圖示的樣式控制 */
+        .result-card .result-icon {
             margin-bottom: 20px;
+        }
+
+        /* 📍 新增：控制蛙寶圖片資產的大小 */
+        .result-image {
+            height: 120px; /* 您可以依據圖片比例調整這個高度 */
+            width: auto;
+            max-width: 100%;
         }
 
         .result-status {
@@ -232,11 +239,6 @@
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 185, 0, 0.7); }
             70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(0, 185, 0, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 185, 0, 0); }
-        }
-
-        /* 蛙寶風格的可愛點綴 (隱藏) */
-        .froggy-icon {
-            display: none;
         }
 
     </style>
@@ -273,14 +275,15 @@
 
     <div class="result-overlay" id="resultOverlay">
         <div class="result-card">
-            <div class="result-icon" id="resultIcon">✅</div>
+            <div class="result-icon" id="resultIcon">
+                </div>
             <div class="result-status" id="resultStatus">打卡成功！</div>
             <div class="result-distance" id="resultDistance">距離中心點約 -- 公尺</div>
             <button class="result-close" id="resultCloseBtn">關閉</button>
         </div>
     </div>
 
-<script>
+    <script>
         // ⚠️ 請替換為您的 LIFF ID
         const LIFF_ID = "2008914129-7KGP9Yxy"; 
         // ⚠️ 請替換為您剛剛部署的 GAS 網頁應用程式 URL
@@ -301,6 +304,12 @@
         const resultCloseBtn = document.getElementById('resultCloseBtn');
 
         let currentUserId = "";
+
+        // 📍 修正：定義蛙寶圖片資產 (使用 <img> 標籤)
+        // ⚠️ 請將 YOUR_SUCCESS_FILENAME.png 替換為您實際在 GitHub 上傳的檔案名稱
+        const froggySuccessImg = `<img src="DK1.png" alt="蛙寶歡呼" class="result-image">`;
+        //如果您有設計失敗的蛙寶圖案，也可以填寫檔案名稱；若無，可填寫一張預設的錯誤圖示網址
+        const froggyErrorImg = `<img src="DK2" alt="打卡失敗" class="result-image">`;
 
         // 1. 初始化 LIFF
         async function initializeLiff() {
@@ -343,13 +352,13 @@
                         sendDataToGAS(currentUserId, lat, lng);
                     },
                     (error) => {
-                        showResult(false, "定位失敗", "請確認已開啟手機及 LINE 的位置權限。");
+                        showResult(false, "定位失敗", "請確認已開啟手機及 LINE 的位置權限。", froggyErrorImg);
                         resetBtn();
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             } else {
-                showResult(false, "功能不支援", "您的裝置不支援定位功能。");
+                showResult(false, "功能不支援", "您的裝置不支援定位功能。", froggyErrorImg);
                 resetBtn();
             }
         });
@@ -366,30 +375,32 @@
             .then(response => response.json())
             .then(result => {
                 if(result.status === "success") {
-                    // 📍 新增：取得手機當下的時間並格式化為 24 小時制 (例如：14:30:05)
+                    // 📍 新增：取得手機當下的時間並格式化
                     const now = new Date();
                     const timeString = now.toLocaleTimeString('zh-TW', { hour12: false }); 
                     
                     // 📍 新增：將時間加入原本的訊息中
                     const successMsg = result.message + "\n⏰ 打卡時間：" + timeString;
                     
-                    showResult(true, "打卡成功！", successMsg);
+                    showResult(true, "打卡成功！", successMsg, froggySuccessImg);
                     btn.classList.add('success'); 
                     resetBtn();
                 } else {
-                    showResult(false, "打卡失敗", result.message);
+                    showResult(false, "打卡失敗", result.message, froggyErrorImg);
                     resetBtn();
                 }
             })
             .catch(error => {
-                showResult(false, "網路錯誤", "❌ 網路連線錯誤，請重試。");
+                showResult(false, "網路錯誤", "❌ 網路連線錯誤，請重試。", froggyErrorImg);
                 resetBtn();
             });
         }
 
         // 輔助：顯示結果視窗
-        function showResult(isSuccess, title, message) {
-            resultIcon.innerText = isSuccess ? "✅" : "❌";
+        function showResult(isSuccess, title, message, froggyImgHtml) {
+            // 📍 修正：使用 innerHTML 貼上圖片標籤
+            resultIcon.innerHTML = froggyImgHtml; 
+            
             resultStatus.innerText = title;
             // 📍 新增：讓文字強制套用換行符號
             resultDistance.style.whiteSpace = "pre-line"; 
