@@ -259,7 +259,27 @@
                 <p>準備執勤中</p>
             </div>
         </div>
-
+<div class="form-section" style="background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: var(--shadow); text-align: left;">
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 8px;">📋 服務內容：</label>
+                <select id="serviceSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;">
+                    <option value="活動">活動</option>
+                    <option value="特色空間">特色空間</option>
+                    <option value="導覽">導覽</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-weight: bold; display: block; margin-bottom: 8px;">⏱️ 打卡狀態：</label>
+                <div style="display: flex; gap: 20px;">
+                    <label style="font-size: 16px; cursor: pointer;">
+                        <input type="radio" name="checkType" value="簽到" checked style="transform: scale(1.3); margin-right: 5px;"> 簽到上班
+                    </label>
+                    <label style="font-size: 16px; cursor: pointer;">
+                        <input type="radio" name="checkType" value="簽退" style="transform: scale(1.3); margin-right: 5px;"> 簽退下班
+                    </label>
+                </div>
+            </div>
+        </div>
         <div class="action-card">
             <button class="checkin-btn" id="checkInBtn" disabled>
                 <span class="icon">📍</span>
@@ -363,9 +383,19 @@
             }
         });
 
-        // 3. 將資料傳送至 GAS
+       // 3. 將資料傳送至 GAS
         function sendDataToGAS(userId, lat, lng) {
-            const postData = { userId: userId, lat: lat, lng: lng };
+            // 抓取志工選擇的服務內容與狀態
+            const serviceType = document.getElementById('serviceSelect').value;
+            const checkType = document.querySelector('input[name="checkType"]:checked').value;
+
+            const postData = { 
+                userId: userId, 
+                lat: lat, 
+                lng: lng,
+                serviceType: serviceType, // 傳送服務內容
+                checkType: checkType      // 傳送狀態
+            };
 
             fetch(GAS_URL, {
                 method: "POST",
@@ -375,14 +405,11 @@
             .then(response => response.json())
             .then(result => {
                 if(result.status === "success") {
-                    // 📍 新增：取得手機當下的時間並格式化
                     const now = new Date();
                     const timeString = now.toLocaleTimeString('zh-TW', { hour12: false }); 
+                    const successMsg = result.message + "\n⏰ 時間：" + timeString;
                     
-                    // 📍 新增：將時間加入原本的訊息中
-                    const successMsg = result.message + "\n⏰ 打卡時間：" + timeString;
-                    
-                    showResult(true, "打卡成功！", successMsg, froggySuccessImg);
+                    showResult(true, checkType + "成功！", successMsg, froggySuccessImg);
                     btn.classList.add('success'); 
                     resetBtn();
                 } else {
