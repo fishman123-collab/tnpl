@@ -6,43 +6,45 @@
     <title>志工服務中心</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* 基礎樣式維持不變 */
         :root { --primary-color: #00B900; --bg-color: #F4F7F6; --text-color: #333333; --secondary-text: #777777; --shadow: 0 4px 6px rgba(0,0,0,0.1); }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
         .container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; }
-        .header { text-align: center; margin-bottom: 30px; padding: 20px 0; }
+        .header { text-align: center; margin-bottom: 20px; padding: 20px 0 10px; }
         .logo-placeholder { font-size: 40px; margin-bottom: 10px; }
         .header h1 { font-size: 22px; font-weight: 700; margin: 0; }
         .header p { font-size: 14px; margin: 5px 0 0; color: var(--secondary-text); }
         
-        /* 區塊顯示控制 */
         .section { display: none; }
         .section.active { display: block; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 綁定表單專屬樣式 */
-        .bind-card { background: white; padding: 25px; border-radius: 16px; box-shadow: var(--shadow); text-align: center; }
-        .bind-input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; letter-spacing: 2px;}
+        /* 綁定表單與打卡 UI (與上一版相同，簡化顯示) */
+        .bind-card, .form-section, .profile-card { background: white; padding: 20px; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        .bind-input, select, input[type="text"], input[type="number"], input[type="datetime-local"] { width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         .bind-btn { background-color: var(--text-color); color: white; border: none; padding: 12px 30px; border-radius: 20px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold;}
-        .bind-btn:disabled { background-color: #ccc; }
+        .checkin-btn { background-color: var(--primary-color); color: white; border: none; width: 150px; height: 150px; border-radius: 50%; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 8px 15px rgba(0, 185, 0, 0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0 auto; }
+        .status-area { background-color: #ffffff; border-radius: 12px; padding: 15px; box-shadow: var(--shadow); font-size: 14px; margin-top: 20px;}
+        .profile-card { display: flex; align-items: center; }
+        .profile-card img { width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; }
 
-        /* 打卡畫面專屬樣式 (保留原本的美化設計) */
-        .profile-card { background-color: #ffffff; border-radius: 16px; padding: 20px; display: flex; align-items: center; box-shadow: var(--shadow); margin-bottom: 25px; }
-        .profile-card img { width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; border: 2px solid #eaeaea; }
-        .profile-info h2 { font-size: 18px; margin: 0; font-weight: 600; }
-        .profile-info p { font-size: 14px; margin: 3px 0 0; color: var(--secondary-text); }
-        .form-section { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: var(--shadow); text-align: left; }
-        .action-card { text-align: center; }
-        .checkin-btn { background-color: var(--primary-color); color: white; border: none; width: 150px; height: 150px; border-radius: 50%; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 8px 15px rgba(0, 185, 0, 0.3); transition: all 0.3s ease; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0 auto; }
-        .checkin-btn:disabled { background-color: #cccccc; box-shadow: none; cursor: not-allowed; }
-        .status-area { margin-top: 30px; background-color: #ffffff; border-radius: 12px; padding: 15px; box-shadow: var(--shadow); font-size: 14px; line-height: 1.6; }
+        /* 館員後台專屬樣式 */
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .admin-header h2 { margin: 0; font-size: 18px; }
+        .refresh-btn { background: #eeeeee; border: none; padding: 8px 15px; border-radius: 15px; cursor: pointer; font-size: 14px; }
         
+        .record-card { background: white; border-radius: 12px; padding: 15px; box-shadow: var(--shadow); margin-bottom: 15px; border-left: 5px solid #ffc107; }
+        .record-card.sign-in { border-left-color: #00B900; }
+        .record-card.sign-out { border-left-color: #ff4d4f; }
+        
+        .record-title { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+        .record-tag { font-size: 12px; background: #eee; padding: 3px 8px; border-radius: 10px; }
+        
+        .approve-btn { background-color: var(--text-color); color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; }
+
         /* 彈出視窗 */
-        .result-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: all 0.3s ease; z-index: 1000; }
+        .result-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; z-index: 1000; }
         .result-overlay.show { opacity: 1; visibility: visible; }
         .result-card { background-color: #ffffff; border-radius: 16px; padding: 30px; text-align: center; width: 80%; max-width: 320px; }
-        .result-image { height: 120px; width: auto; max-width: 100%; margin-bottom: 15px; }
-        .result-close { background-color: var(--text-color); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -61,256 +63,241 @@
         <div id="sectionBind" class="section">
             <div class="bind-card">
                 <h2 style="margin-top:0;">身分驗證</h2>
-                <p style="color:var(--secondary-text); font-size:14px; text-align:left;">歡迎初次使用！為確保系統安全，請輸入您在建檔時留存的手機號碼進行帳號綁定。</p>
-                <input type="tel" id="phoneInput" class="bind-input" placeholder="例如：0912345678" maxlength="10">
+                <input type="tel" id="phoneInput" class="bind-input" placeholder="請輸入建檔手機號碼" maxlength="10">
                 <button id="bindBtn" class="bind-btn">立即綁定</button>
-            </div>
-            <div class="status-area" id="bindStatusArea" style="display:none;">
-                <div class="status-title">📢 系統訊息</div>
-                <div class="status-msg" id="bindStatusMsg"></div>
             </div>
         </div>
 
         <div id="sectionCheckIn" class="section">
-            <div class="profile-card" id="profileCard">
+            <div class="profile-card">
                 <img src="" alt="頭像" id="userAvatar">
                 <div class="profile-info">
                     <h2 id="userName">您好，志工</h2>
                     <p>準備執勤中</p>
                 </div>
             </div>
-
             <div class="form-section">
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px;">📋 服務內容：</label>
-                    <select id="serviceSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;">
-                        <option value="活動">活動</option>
-                        <option value="特色空間">特色空間</option>
-                        <option value="導覽">導覽</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px;">⏱️ 打卡狀態：</label>
-                    <div style="display: flex; gap: 20px;">
-                        <label style="font-size: 16px; cursor: pointer;"><input type="radio" name="checkType" value="簽到" checked style="transform: scale(1.3); margin-right: 5px;"> 簽到</label>
-                        <label style="font-size: 16px; cursor: pointer;"><input type="radio" name="checkType" value="簽退" style="transform: scale(1.3); margin-right: 5px;"> 簽退</label>
-                    </div>
+                <label style="font-weight: bold; display: block;">📋 服務內容：</label>
+                <select id="serviceSelect">
+                    <option value="活動">活動</option>
+                    <option value="特色空間">特色空間</option>
+                    <option value="導覽">導覽</option>
+                </select>
+                <label style="font-weight: bold; display: block; margin-top:10px;">⏱️ 打卡狀態：</label>
+                <div style="display: flex; gap: 20px; margin-top: 5px;">
+                    <label><input type="radio" name="checkType" value="簽到" checked> 簽到</label>
+                    <label><input type="radio" name="checkType" value="簽退"> 簽退</label>
                 </div>
             </div>
-
             <div class="action-card">
                 <button class="checkin-btn" id="checkInBtn">
-                    <span style="font-size: 40px; margin-bottom: 8px;">📍</span>
-                    <span class="text" id="checkInBtnText">點我打卡</span>
+                    <span style="font-size: 40px;">📍</span>
+                    <span id="checkInBtnText">點我打卡</span>
                 </button>
             </div>
+        </div>
 
-            <div class="status-area">
-                <div class="status-title">📢 系統狀態</div>
-                <div class="status-msg" id="statusMsg">準備就緒。</div>
+        <div id="sectionAdmin" class="section">
+            <div class="profile-card" style="margin-bottom: 15px; padding: 15px;">
+                <div>
+                    <h2 id="staffName" style="margin: 0; font-size: 18px;">館員您好</h2>
+                    <p style="margin: 3px 0 0; font-size: 13px; color: var(--secondary-text);">管理員模式已啟動</p>
+                </div>
+            </div>
+            
+            <div class="admin-header">
+                <h2>📋 待審核清單</h2>
+                <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重新整理</button>
+            </div>
+            <div id="adminRecordsContainer">
+                <p style="text-align:center; color:gray;">載入資料中...</p>
             </div>
         </div>
+
     </div>
 
     <div class="result-overlay" id="resultOverlay">
         <div class="result-card">
             <div id="resultIcon"></div>
             <div id="resultStatus" style="font-size: 20px; font-weight: bold; margin-bottom: 10px;"></div>
-            <div id="resultDistance" style="font-size: 14px; color: var(--secondary-text); white-space: pre-line;"></div>
-            <button class="result-close" id="resultCloseBtn">關閉</button>
+            <div id="resultDistance" style="white-space: pre-line; margin-bottom: 20px; font-size: 14px;"></div>
+            <button class="bind-btn" onclick="document.getElementById('resultOverlay').classList.remove('show');">關閉</button>
         </div>
     </div>
 
     <script>
-        // 直接套用您提供的專屬設定
         const LIFF_ID = "2008914129-7KGP9Yxy"; 
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
 
         let currentUserId = "";
-        let currentProfile = null;
+        let dbUserName = ""; 
+        const froggySuccessImg = `<img src="DK1.png" alt="成功" style="height:100px; margin-bottom:15px;">`;
+        const froggyErrorImg = `<img src="DK2.png" alt="失敗" style="height:100px; margin-bottom:15px;">`;
 
-        const secLoading = document.getElementById('sectionLoading');
-        const secBind = document.getElementById('sectionBind');
-        const secCheckIn = document.getElementById('sectionCheckIn');
-        const sysSubtitle = document.getElementById('systemSubtitle');
-
-        const froggySuccessImg = `<img src="DK1.png" alt="成功" class="result-image">`;
-        const froggyErrorImg = `<img src="DK2.png" alt="失敗" class="result-image">`;
-
-        // ==========================================
-        // 1. 系統初始化與身分檢查
-        // ==========================================
         async function initializeApp() {
             try {
                 await liff.init({ liffId: LIFF_ID });
                 if (!liff.isLoggedIn()) { liff.login(); return; }
+                const profile = await liff.getProfile();
+                currentUserId = profile.userId;
+                document.getElementById('userAvatar').src = profile.pictureUrl;
                 
-                currentProfile = await liff.getProfile();
-                currentUserId = currentProfile.userId;
-                
-                // 向後端確認是否已經綁定
                 checkBindingStatus();
-                
-            } catch (err) {
-                alert("LIFF 初始化失敗：" + err.message);
-            }
+            } catch (err) { alert("LIFF 初始化失敗"); }
         }
 
         function checkBindingStatus() {
             fetch(GAS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: "checkBinding", userId: currentUserId })
-            })
-            .then(res => res.json())
-            .then(result => {
+            }).then(res => res.json()).then(result => {
                 if (result.status === "bound") {
-                    // 已綁定，進入打卡畫面
-                    setupCheckInUI(result.name, result.role);
+                    dbUserName = result.name;
+                    if (result.role === "staff") setupAdminUI();
+                    else setupCheckInUI();
                 } else {
-                    // 未綁定，顯示綁定表單
-                    switchSection(secBind);
-                    sysSubtitle.innerText = "首次使用驗證";
+                    switchSection(document.getElementById('sectionBind'));
+                    document.getElementById('systemSubtitle').innerText = "首次使用驗證";
                 }
-            })
-            .catch(err => alert("連線錯誤，請重新開啟。"));
+            });
         }
 
-        // ==========================================
-        // 2. 處理帳號綁定
-        // ==========================================
         document.getElementById('bindBtn').addEventListener('click', () => {
             const phone = document.getElementById('phoneInput').value;
-            if (phone.length < 9) { alert("請輸入完整的手機號碼！"); return; }
-            
-            document.getElementById('bindBtn').disabled = true;
-            document.getElementById('bindBtn').innerText = "驗證中...";
-
             fetch(GAS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: "bindAccount", userId: currentUserId, phone: phone })
-            })
-            .then(res => res.json())
-            .then(result => {
+            }).then(res => res.json()).then(result => {
                 if (result.status === "success") {
-                    alert("✅ 綁定成功！歡迎加入，" + result.name);
-                    setupCheckInUI(result.name, result.role);
-                } else {
-                    document.getElementById('bindStatusArea').style.display = "block";
-                    document.getElementById('bindStatusMsg').innerText = "❌ " + result.message;
-                    document.getElementById('bindBtn').disabled = false;
-                    document.getElementById('bindBtn').innerText = "重新驗證";
-                }
-            }).catch(err => {
-                alert("連線失敗，請重試。");
-                document.getElementById('bindBtn').disabled = false;
-                document.getElementById('bindBtn').innerText = "立即綁定";
+                    dbUserName = result.name;
+                    alert("綁定成功！歡迎，" + dbUserName);
+                    if (result.role === "staff") setupAdminUI();
+                    else setupCheckInUI();
+                } else alert(result.message);
             });
         });
 
-        // ==========================================
-        // 3. 處理打卡畫面與邏輯
-        // ==========================================
-        function setupCheckInUI(dbName, role) {
-            switchSection(secCheckIn);
-            sysSubtitle.innerText = "定位打卡系統";
-            document.getElementById('userAvatar').src = currentProfile.pictureUrl;
-            document.getElementById('userName').innerText = dbName; // 顯示資料庫內的本名
-
-            // 簽退時鎖定服務內容選單
-            const checkTypeRadios = document.querySelectorAll('input[name="checkType"]');
-            const serviceSelect = document.getElementById('serviceSelect');
-            checkTypeRadios.forEach(radio => {
-                radio.addEventListener('change', (e) => {
-                    if (e.target.value === '簽退') {
-                        serviceSelect.disabled = true;
-                        serviceSelect.style.backgroundColor = "#eeeeee";
-                    } else {
-                        serviceSelect.disabled = false;
-                        serviceSelect.style.backgroundColor = "#ffffff";
-                    }
-                });
-            });
+        // --- 志工打卡 UI ---
+        function setupCheckInUI() {
+            switchSection(document.getElementById('sectionCheckIn'));
+            document.getElementById('systemSubtitle').innerText = "定位打卡系統";
+            document.getElementById('userName').innerText = dbUserName;
         }
 
         document.getElementById('checkInBtn').addEventListener('click', () => {
             const btn = document.getElementById('checkInBtn');
             const btnText = document.getElementById('checkInBtnText');
-            const statusMsg = document.getElementById('statusMsg');
+            btn.disabled = true; btnText.innerText = "定位中...";
             
-            btn.disabled = true;
-            btnText.innerText = "定位中...";
-            statusMsg.innerText = "正在取得 GPS 定位，請稍候...";
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        btnText.innerText = "傳送中...";
-                        statusMsg.innerText = "定位成功，正在傳送資料...";
-                        
-                        const serviceType = document.getElementById('serviceSelect').value;
-                        const checkType = document.querySelector('input[name="checkType"]:checked').value;
-
-                        // 送出打卡請求 (包含 action: "checkIn")
-                        fetch(GAS_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                            body: JSON.stringify({
-                                action: "checkIn",
-                                userId: currentUserId,
-                                lat: lat,
-                                lng: lng,
-                                serviceType: serviceType,
-                                checkType: checkType
-                            })
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    fetch(GAS_URL, {
+                        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+                        body: JSON.stringify({
+                            action: "checkIn", userId: currentUserId, lat: pos.coords.latitude, lng: pos.coords.longitude,
+                            serviceType: document.getElementById('serviceSelect').value,
+                            checkType: document.querySelector('input[name="checkType"]:checked').value
                         })
-                        .then(res => res.json())
-                        .then(result => {
-                            if(result.status === "success") {
-                                const timeStr = new Date().toLocaleTimeString('zh-TW', { hour12: false }); 
-                                showPopup(true, checkType + "成功！", result.message + "\n⏰ 時間：" + timeStr);
-                            } else {
-                                showPopup(false, "打卡失敗", result.message);
-                            }
-                            resetCheckInBtn();
-                        })
-                        .catch(err => { showPopup(false, "連線錯誤", "請確認網路連線。"); resetCheckInBtn(); });
-                    },
-                    (error) => { showPopup(false, "定位失敗", "請確認手機已開啟位置權限。"); resetCheckInBtn(); },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            } else {
-                showPopup(false, "設備不支援", "您的裝置無法取得定位。"); resetCheckInBtn();
-            }
+                    }).then(res => res.json()).then(result => {
+                        showPopup(result.status === "success", result.status === "success" ? "打卡成功！" : "打卡失敗", result.message);
+                        btn.disabled = false; btnText.innerText = "點我打卡";
+                    });
+                },
+                (err) => { showPopup(false, "定位失敗", "請確認手機已開啟位置權限。"); btn.disabled = false; btnText.innerText = "點我打卡"; },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
         });
 
-        // 輔助函數
+        // --- 館員管理後台 UI ---
+        function setupAdminUI() {
+            switchSection(document.getElementById('sectionAdmin'));
+            document.getElementById('systemSubtitle').innerText = "館員管理中心";
+            document.getElementById('staffName').innerText = "您好，" + dbUserName;
+            fetchPendingRecords();
+        }
+
+        function fetchPendingRecords() {
+            const container = document.getElementById('adminRecordsContainer');
+            container.innerHTML = '<p style="text-align:center; color:gray;">撈取資料中...</p>';
+            
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "getPendingRecords" })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") {
+                    container.innerHTML = "";
+                    if (result.data.length === 0) {
+                        container.innerHTML = '<p style="text-align:center; color:#00B900; font-weight:bold;">🎉 目前沒有待審核的紀錄！</p>';
+                        return;
+                    }
+                    result.data.forEach(record => {
+                        const card = document.createElement('div');
+                        const borderColor = record.checkType === '簽到' ? 'sign-in' : 'sign-out';
+                        card.className = `record-card ${borderColor}`;
+                        
+                        card.innerHTML = `
+                            <div class="record-title">
+                                <span>👤 ${record.volunteerName}</span>
+                                <span class="record-tag">${record.checkType}</span>
+                            </div>
+                            <div style="font-size:14px; margin-bottom:10px; color:#555;">📍 服務內容：${record.serviceType}</div>
+                            
+                            <label style="font-size:13px; font-weight:bold;">校正時間 (預設為原始打卡時間)：</label>
+                            <input type="datetime-local" id="time_${record.uuid}" value="${record.timestamp}">
+                            
+                            <div style="display:flex; gap:10px;">
+                                <div style="flex:1;">
+                                    <label style="font-size:13px; font-weight:bold;">時數加權：</label>
+                                    <input type="number" id="mul_${record.uuid}" value="1" step="0.5" min="1">
+                                </div>
+                                <div style="flex:2;">
+                                    <label style="font-size:13px; font-weight:bold;">館員備註：</label>
+                                    <input type="text" id="rem_${record.uuid}" placeholder="選填">
+                                </div>
+                            </div>
+                            
+                            <button class="approve-btn" onclick="approveRecord('${record.uuid}')">✅ 確認核准</button>
+                        `;
+                        container.appendChild(card);
+                    });
+                }
+            });
+        }
+
+        function approveRecord(uuid) {
+            const newTime = document.getElementById(`time_${uuid}`).value;
+            const multiplier = document.getElementById(`mul_${uuid}`).value;
+            const remark = document.getElementById(`rem_${uuid}`).value;
+            
+            const btn = event.target;
+            btn.disabled = true; btn.innerText = "處理中...";
+
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ 
+                    action: "approveRecord", uuid: uuid, newTime: newTime, multiplier: multiplier, remark: remark, staffName: dbUserName
+                })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") {
+                    fetchPendingRecords(); // 重新撈取清單
+                } else {
+                    alert(result.message);
+                    btn.disabled = false; btn.innerText = "✅ 確認核准";
+                }
+            });
+        }
+
+        // --- 共用輔助 ---
         function switchSection(targetSection) {
             document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
             targetSection.classList.add('active');
         }
-
         function showPopup(isSuccess, title, msg) {
             document.getElementById('resultIcon').innerHTML = isSuccess ? froggySuccessImg : froggyErrorImg;
             document.getElementById('resultStatus').innerText = title;
             document.getElementById('resultDistance').innerText = msg;
             document.getElementById('resultOverlay').classList.add('show');
-            document.getElementById('statusMsg').innerText = msg;
         }
-
-        document.getElementById('resultCloseBtn').addEventListener('click', () => {
-            document.getElementById('resultOverlay').classList.remove('show');
-        });
-
-        function resetCheckInBtn() {
-            document.getElementById('checkInBtn').disabled = false;
-            document.getElementById('checkInBtnText').innerText = "點我打卡";
-        }
-
-        // 啟動程式
         initializeApp();
     </script>
 </body>
