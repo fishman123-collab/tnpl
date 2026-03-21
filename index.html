@@ -708,15 +708,30 @@
             }).then(res => res.json()).then(result => {
                 if(result.status === "success") {
                     allAdminQueryRecords = result.data;
-                    globalRoster = result.roster; // 儲存名冊
+                    globalRoster = result.roster; 
                     
-                    // 📍 核心修改：使用志工名冊動態生成下拉選單 (以 userId 為 value)
+                    // 📍 智慧顯示邏輯 1：先計算名冊中每個名字出現的次數
+                    const nameCounts = {};
+                    globalRoster.forEach(vol => {
+                        nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1;
+                    });
+
                     const volSelect = document.getElementById('adminVolSelector');
                     volSelect.innerHTML = '<option value="ALL">-- 所有志工 --</option>';
+                    
                     globalRoster.forEach(vol => {
-                        // 解決同名同姓：顯示「姓名(手機尾數)」。若無 LINE ID 則視為未綁定。
                         const val = vol.lineId || `unbound_${Math.random()}`;
-                        const displayName = vol.lineId ? `${vol.name} (尾數${vol.phoneTail})` : `${vol.name} (尚未綁定)`;
+                        let displayName = vol.name;
+                        
+                        if (vol.lineId) {
+                            // 📍 智慧顯示邏輯 2：只有在「同名同姓」且「有手機尾數」時，才加上 (尾數XXXX)
+                            if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") {
+                                displayName += ` (尾數${vol.phoneTail})`;
+                            }
+                        } else {
+                            displayName += ` (尚未綁定)`;
+                        }
+                        
                         volSelect.innerHTML += `<option value="${val}">${displayName}</option>`;
                     });
 
@@ -859,7 +874,7 @@
             document.body.removeChild(link);
         }
 
-        // 📍 核心新增：匯出年度總結算表 (矩陣表)
+        // 📍 匯出年度總結算表 (矩陣表)
         function exportYearlySummaryCSV() {
             if (globalRoster.length === 0) { alert("無法取得志工名冊資料！"); return; }
             
@@ -867,22 +882,31 @@
             let csvContent = "\uFEFF"; 
             csvContent += "志工姓名,1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月,年度總計\n";
 
-            // 針對名冊上的「每一個人」去計算他的 1~12 月時數
+            // 📍 智慧顯示邏輯 1：同樣先計算名字出現次數
+            const nameCounts = {};
+            globalRoster.forEach(vol => {
+                nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1;
+            });
+
             globalRoster.forEach(vol => {
                 let monthlyHours = Array(12).fill(0);
                 let yearlyTotal = 0;
 
-                // 只有已綁定 (有 LINE ID) 的志工才可能有打卡紀錄
                 if (vol.lineId) {
                     const volRecords = allAdminQueryRecords.filter(r => r.userId === vol.lineId && r.year === selectedYear);
                     volRecords.forEach(r => {
-                        const monthIndex = parseInt(r.yearMonth.split('-')[1], 10) - 1; // 把 "2026-03" 轉成陣列索引 2
+                        const monthIndex = parseInt(r.yearMonth.split('-')[1], 10) - 1; 
                         monthlyHours[monthIndex] += r.finalHours;
                         yearlyTotal += r.finalHours;
                     });
                 }
 
-                const displayName = `${vol.name}(${vol.phoneTail})`;
+                // 📍 智慧顯示邏輯 2：報表上的姓名顯示判斷
+                let displayName = vol.name;
+                if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") {
+                    displayName += `(尾數${vol.phoneTail})`;
+                }
+
                 const row = [displayName, ...monthlyHours.map(h => h.toFixed(1)), yearlyTotal.toFixed(1)];
                 csvContent += row.join(",") + "\n";
             });
