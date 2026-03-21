@@ -99,8 +99,47 @@
                 <div style="font-weight: bold; margin-bottom: 10px; color: var(--secondary-text);">📢 系統狀態</div>
                 <div id="statusMsg">準備就緒。</div>
             </div>
+            <button onclick="openRecordsUI()" style="margin-top: 15px; width: 100%; background: #e0f2f1; color: #00897b; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span>📊</span> 查詢我的服務紀錄
+            </button>
+            
+        </div>
+<div id="sectionRecords" class="section">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <button onclick="switchSection(document.getElementById('sectionCheckIn'))" style="background:none; border:none; font-size:16px; color:var(--primary-color); font-weight:bold; cursor:pointer;">⬅️ 返回打卡</button>
+                <h2 style="margin:0; font-size: 18px;">我的服務紀錄</h2>
             </div>
 
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="tabMonthly" onclick="switchRecordTab('monthly')" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--primary-color); color:white; font-weight:bold; cursor:pointer;">📅 單月明細</button>
+                <button id="tabYearly" onclick="switchRecordTab('yearly')" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ccc; background:white; color:var(--text-color); font-weight:bold; cursor:pointer;">📈 年度結算</button>
+            </div>
+
+            <div id="viewMonthly">
+                <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px; text-align: center;">
+                    <label style="font-weight:bold; display:block; margin-bottom:8px; color:var(--secondary-text);">選擇查詢月份：</label>
+                    <input type="month" id="monthSelector" onchange="renderMonthlyRecords()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing:border-box;">
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;">
+                        <span style="font-size: 14px; color: var(--secondary-text);">該月總計時數</span>
+                        <div id="monthlyTotalHours" style="font-size: 28px; font-weight: bold; color: var(--primary-color);">0.0 <span style="font-size:16px;">小時</span></div>
+                    </div>
+                </div>
+                <div id="monthlyListContainer"></div>
+            </div>
+
+            <div id="viewYearly" style="display:none;">
+                <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px; text-align: center;">
+                    <label style="font-weight:bold; display:block; margin-bottom:8px; color:var(--secondary-text);">選擇結算年度：</label>
+                    <select id="yearSelector" onchange="renderYearlyRecords()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing:border-box;">
+                        </select>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;">
+                        <span style="font-size: 14px; color: var(--secondary-text);">年度累積總計</span>
+                        <div id="yearlyTotalHours" style="font-size: 28px; font-weight: bold; color: #d97706;">0.0 <span style="font-size:16px;">小時</span></div>
+                    </div>
+                </div>
+                <div id="yearlyListContainer"></div>
+            </div>
+        </div>
         <div id="sectionAdmin" class="section">
             <div class="profile-card" style="margin-bottom: 15px; padding: 15px;">
                 <div>
@@ -414,6 +453,131 @@
             document.getElementById('resultOverlay').classList.add('show');
         }
         initializeApp();
+        // ==========================================
+        // 📍 志工服務紀錄查詢邏輯
+        // ==========================================
+        let allVolunteerRecords = [];
+
+        function openRecordsUI() {
+            switchSection(document.getElementById('sectionRecords'));
+            
+            // 預設設定年月選擇器為當前時間
+            const now = new Date();
+            const currentMonth = now.toISOString().slice(0, 7); // 格式: YYYY-MM
+            const currentYear = currentMonth.slice(0, 4);
+            
+            document.getElementById('monthSelector').value = currentMonth;
+            
+            // 填入年份下拉選單 (近3年)
+            const yearSelect = document.getElementById('yearSelector');
+            yearSelect.innerHTML = "";
+            for (let y = parseInt(currentYear); y >= parseInt(currentYear) - 2; y--) {
+                yearSelect.innerHTML += `<option value="${y}">${y} 年</option>`;
+            }
+
+            // 呼叫 GAS 撈取資料
+            document.getElementById('monthlyListContainer').innerHTML = '<p style="text-align:center; color:gray;">資料載入中 ⏳...</p>';
+            
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "getVolunteerRecords", userId: currentUserId })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") {
+                    allVolunteerRecords = result.data;
+                    renderMonthlyRecords(); // 預設渲染單月
+                } else {
+                    alert("載入失敗：" + result.message);
+                }
+            });
+        }
+
+        function switchRecordTab(tab) {
+            const btnMonthly = document.getElementById('tabMonthly');
+            const btnYearly = document.getElementById('tabYearly');
+            const viewMonthly = document.getElementById('viewMonthly');
+            const viewYearly = document.getElementById('viewYearly');
+
+            if (tab === 'monthly') {
+                btnMonthly.style.background = 'var(--primary-color)'; btnMonthly.style.color = 'white'; btnMonthly.style.border = 'none';
+                btnYearly.style.background = 'white'; btnYearly.style.color = 'var(--text-color)'; btnYearly.style.border = '1px solid #ccc';
+                viewMonthly.style.display = 'block'; viewYearly.style.display = 'none';
+                renderMonthlyRecords();
+            } else {
+                btnYearly.style.background = 'var(--text-color)'; btnYearly.style.color = 'white'; btnYearly.style.border = 'none';
+                btnMonthly.style.background = 'white'; btnMonthly.style.color = 'var(--text-color)'; btnMonthly.style.border = '1px solid #ccc';
+                viewYearly.style.display = 'block'; viewMonthly.style.display = 'none';
+                renderYearlyRecords();
+            }
+        }
+
+        function renderMonthlyRecords() {
+            const selectedMonth = document.getElementById('monthSelector').value; // e.g., "2026-03"
+            const container = document.getElementById('monthlyListContainer');
+            container.innerHTML = "";
+
+            let totalHours = 0;
+            const filteredRecords = allVolunteerRecords.filter(r => r.yearMonth === selectedMonth);
+
+            if (filteredRecords.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px; background:white; border-radius:12px;">這個月還沒有已審核的執勤紀錄喔！</div>`;
+            } else {
+                filteredRecords.forEach(r => {
+                    totalHours += r.finalHours;
+                    
+                    // 加權提示字串
+                    const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px; margin-left:5px;">⭐ 加權 x${r.multiplier}</span>` : "";
+                    const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
+
+                    container.innerHTML += `
+                        <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <div style="font-weight:bold; font-size:16px;">📅 ${r.date}</div>
+                                <div style="font-weight:bold; color:var(--primary-color); font-size:16px;">${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span></div>
+                            </div>
+                            <div style="font-size:14px; color:#555; margin-bottom:5px;">⏱️ ${r.startTime} ~ ${r.endTime}</div>
+                            <div style="font-size:14px; color:#555;">📍 服務：${r.serviceType} ${multiplierText}</div>
+                            ${remarkHtml}
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('monthlyTotalHours').innerText = totalHours.toFixed(1);
+        }
+
+        function renderYearlyRecords() {
+            const selectedYear = document.getElementById('yearSelector').value;
+            const container = document.getElementById('yearlyListContainer');
+            container.innerHTML = "";
+
+            let yearTotal = 0;
+            const monthlySums = {}; // 儲存 1~12 月的加總
+
+            allVolunteerRecords.forEach(r => {
+                if (r.year === selectedYear) {
+                    yearTotal += r.finalHours;
+                    if (!monthlySums[r.yearMonth]) monthlySums[r.yearMonth] = 0;
+                    monthlySums[r.yearMonth] += r.finalHours;
+                }
+            });
+
+            if (Object.keys(monthlySums).length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px; background:white; border-radius:12px;">該年度尚未有執勤紀錄。</div>`;
+            } else {
+                // 將月份排序 (例如 2026-03, 2026-02...)
+                const sortedMonths = Object.keys(monthlySums).sort().reverse();
+                
+                sortedMonths.forEach(ym => {
+                    const [, month] = ym.split('-');
+                    container.innerHTML += `
+                        <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid #d97706;">
+                            <div style="font-weight:bold; font-size:16px;">📅 ${month} 月份結算</div>
+                            <div style="font-weight:bold; color:#d97706; font-size:18px;">${monthlySums[ym].toFixed(1)} <span style="font-size:13px;">hr</span></div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('yearlyTotalHours').innerText = yearTotal.toFixed(1);
+        }
     </script>
 </body>
 </html>
