@@ -73,7 +73,7 @@
                 <img src="" alt="頭像" id="userAvatar">
                 <div class="profile-info">
                     <h2 id="userName">您好，志工</h2>
-                    <p>準備執勤中</p>
+                    <p id="userRole"></p>
                 </div>
             </div>
             <div class="form-section">
@@ -146,6 +146,24 @@
             } catch (err) { alert("LIFF 初始化失敗"); }
         }
 
+        // 📍 輔助函數：處理職稱顯示邏輯
+        function formatRoleDisplay(group, title) {
+            if (!title && !group) return "準備執勤中";
+            
+            let displayTitle = title;
+            // 貼心設計：拿掉「一般」兩字
+            if (title === "一般志工") {
+                displayTitle = "志工";
+            }
+            
+            // 組織架構設計：大隊長的專屬顯示方式
+            if (title === "大隊長") {
+                return `大隊長 (所屬：${group})`;
+            } else {
+                return `${group} - ${displayTitle}`;
+            }
+        }
+
         function checkBindingStatus() {
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -153,8 +171,12 @@
             }).then(res => res.json()).then(result => {
                 if (result.status === "bound") {
                     dbUserName = result.name;
-                    if (result.role === "staff") setupAdminUI();
-                    else setupCheckInUI();
+                    if (result.role === "staff") {
+                        setupAdminUI();
+                    } else {
+                        // 📍 帶入組別與職稱
+                        setupCheckInUI(result.group, result.title);
+                    }
                 } else {
                     switchSection(document.getElementById('sectionBind'));
                     document.getElementById('systemSubtitle').innerText = "首次使用驗證";
@@ -171,27 +193,34 @@
                 if (result.status === "success") {
                     dbUserName = result.name;
                     alert("綁定成功！歡迎，" + dbUserName);
-                    if (result.role === "staff") setupAdminUI();
-                    else setupCheckInUI();
+                    if (result.role === "staff") {
+                        setupAdminUI();
+                    } else {
+                        // 📍 帶入組別與職稱
+                        setupCheckInUI(result.group, result.title);
+                    }
                 } else alert(result.message);
             });
         });
 
         // --- 志工打卡 UI ---
-        function setupCheckInUI() {
+        function setupCheckInUI(group, title) {
             switchSection(document.getElementById('sectionCheckIn'));
             document.getElementById('systemSubtitle').innerText = "定位打卡系統";
             document.getElementById('userName').innerText = dbUserName;
+            // 📍 顯示轉換後的組別與職稱
+            document.getElementById('userRole').innerText = formatRoleDisplay(group, title);
         }
 
+        // 📍 更新：打卡按鈕事件 (在主畫面顯示精美收據)
         document.getElementById('checkInBtn').addEventListener('click', () => {
             const btn = document.getElementById('checkInBtn');
             const btnText = document.getElementById('checkInBtnText');
-            const statusMsg = document.getElementById('statusMsg'); // 確保抓到主畫面狀態區塊
+            const statusMsg = document.getElementById('statusMsg'); // 主畫面下方的狀態區塊
             
             btn.disabled = true; 
             btnText.innerText = "定位中...";
-            statusMsg.innerHTML = "正在取得 GPS 定位，請稍候..."; // 讓主畫面同步顯示進度
+            statusMsg.innerHTML = "正在取得 GPS 定位，請稍候...";
             
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -212,18 +241,20 @@
                             const timeStr = new Date().toLocaleTimeString('zh-TW', { hour12: false }); 
                             const distanceInfo = result.distance !== undefined ? `\n📏 距離：${result.distance} 公尺` : "";
                             
-                            // 1. 給彈出視窗的純文字訊息 (維持原樣)
+                            // 給彈出視窗的訊息
                             const detailMsg = `👤 姓名：${dbUserName}\n📋 服務：${serviceType}\n⏱️ 狀態：${checkType}${distanceInfo}\n⏰ 時間：${timeStr}`;
                             
-                            // 2. 📍 新增：給主畫面的精美 HTML 明細卡片
+                            // 📍 給主畫面下方的「精美明細卡片」
                             const mainHtml = `
-                                <div style="color: #00B900; font-weight: bold; font-size: 16px; margin-bottom: 8px;">✅ 打卡成功！</div>
-                                <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0; font-size: 15px; line-height: 1.8; color: #166534; text-align: left;">
+                                <div style="color: #00B900; font-weight: bold; font-size: 16px; margin-bottom: 10px;">✅ 打卡成功明細</div>
+                                <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; font-size: 15px; line-height: 1.8; color: #166534; text-align: left;">
                                     <div><b>👤 姓名：</b>${dbUserName}</div>
                                     <div><b>📋 服務：</b>${serviceType}</div>
                                     <div><b>⏱️ 狀態：</b>${checkType}</div>
                                     ${result.distance !== undefined ? `<div><b>📏 距離：</b>${result.distance} 公尺</div>` : ""}
-                                    <div><b>⏰ 時間：</b><span style="font-weight: bold; font-size: 16px;">${timeStr}</span></div>
+                                    <div style="margin-top: 5px; border-top: 1px dashed #86efac; padding-top: 5px;">
+                                        <b>⏰ 時間：</b><span style="font-weight: bold; font-size: 16px;">${timeStr}</span>
+                                    </div>
                                 </div>
                             `;
                             
