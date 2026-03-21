@@ -348,7 +348,8 @@
                                 <span style="font-weight:bold; color:#166534;">🕒 ${timeLabel}：</span> 
                                 <span style="color:#166534; margin-right: 5px;">${displayDate}</span>
                                 
-                                <input type="time" id="timeOnly_${record.uuid}" data-date="${datePart}" value="${timePart}" 
+                                <input type="time" id="timeOnly_${record.uuid}" data-date="${datePart}" data-original-time="${timePart}" value="${timePart}" 
+                                    onchange="if(this.value === '') this.value = this.getAttribute('data-original-time');"
                                     style="border: 1px solid #00B900; color: #00B900; font-weight: bold; font-size: 16px; background: white; padding: 4px 8px; border-radius: 6px; cursor: pointer; width: auto; margin:0; outline: none;">
                             </div>
                             
