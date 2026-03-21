@@ -180,13 +180,29 @@
         async function initializeApp() {
             try {
                 await liff.init({ liffId: LIFF_ID });
-                if (!liff.isLoggedIn()) { liff.login(); return; }
+                
+                // 📍 終極防呆機制：檢查是否走對「正門」
+                // liff.getContext() 如果是 null，代表他是直接點擊 GitHub 原始網址進來的
+                if (!liff.getContext()) {
+                    // 強制幫他跳轉到正確的 LIFF 專屬網址
+                    window.location.href = "https://liff.line.me/2008914129-7KGP9Yxy";
+                    return; // 終止後續動作，等待跳轉
+                }
+
+                if (!liff.isLoggedIn()) { 
+                    liff.login(); 
+                    return; 
+                }
+                
                 const profile = await liff.getProfile();
                 currentUserId = profile.userId;
                 document.getElementById('userAvatar').src = profile.pictureUrl;
                 
                 checkBindingStatus();
-            } catch (err) { alert("LIFF 初始化失敗"); }
+                
+            } catch (err) { 
+                alert("系統初始化失敗，請確認網路連線或重啟 LINE。\n錯誤細節：" + err.message); 
+            }
         }
 
         // 📍 輔助函數：處理職稱顯示邏輯
