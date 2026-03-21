@@ -366,6 +366,17 @@
                         container.innerHTML = '<p style="text-align:center; color:#00B900; font-weight:bold;">🎉 目前沒有待審核的紀錄！</p>';
                         return;
                     }
+                    
+                    // 📍 輔助函數：用來自動生成 00~23 或 00~59 的下拉選單選項
+                    const getOptions = (max, selected) => {
+                        let opts = '';
+                        for(let i=0; i<=max; i++) {
+                            let val = i.toString().padStart(2, '0');
+                            opts += `<option value="${val}" ${val === selected ? 'selected' : ''}>${val}</option>`;
+                        }
+                        return opts;
+                    };
+
                     result.data.forEach(record => {
                         const card = document.createElement('div');
                         const isSignIn = record.checkType === '簽到';
@@ -375,9 +386,8 @@
                         const timeLabel = isSignIn ? '簽到時間' : '簽退時間';
                         const [datePart, timePart] = record.timestamp.split('T');
                         const displayDate = datePart.replace(/-/g, '/'); 
+                        const [origHour, origMin] = timePart.split(':'); // 切出原始的時與分
                         
-                        // 📍 核心修改：依據簽到退狀態，設定不同的區塊顏色與文字顏色
-                        // 簽到：淡綠配暗綠。簽退：淡粉配暗紅。
                         const styles = isSignIn 
                             ? { bg: '#f0fdf4', border: '#bbf7d0', text: '#166534', input: '#00B900' }
                             : { bg: '#fff1f0', border: '#ffa39e', text: '#a8071a', input: '#ff4d4f' };
@@ -400,9 +410,15 @@
                                 <span style="font-weight:bold; color:${styles.text};">🕒 ${timeLabel}：</span> 
                                 <span style="color:${styles.text}; margin-right: 5px;">${displayDate}</span>
                                 
-                                <input type="time" id="timeOnly_${record.uuid}" data-date="${datePart}" data-original-time="${timePart}" value="${timePart}" 
-                                    onchange="if(this.value === '') this.value = this.getAttribute('data-original-time');"
-                                    style="border: 1px solid ${styles.input}; color: ${styles.input}; font-weight: bold; font-size: 16px; background: white; padding: 4px 8px; border-radius: 6px; cursor: pointer; width: auto; margin:0; outline: none;">
+                                <div style="display:flex; align-items:center; gap:3px;">
+                                    <select id="hour_${record.uuid}" data-date="${datePart}" style="border: 1px solid ${styles.input}; color: ${styles.input}; font-weight: bold; font-size: 16px; background: white; padding: 4px; border-radius: 6px; cursor: pointer; outline: none;">
+                                        ${getOptions(23, origHour)}
+                                    </select>
+                                    <span style="font-weight:bold; color:${styles.input};">:</span>
+                                    <select id="min_${record.uuid}" style="border: 1px solid ${styles.input}; color: ${styles.input}; font-weight: bold; font-size: 16px; background: white; padding: 4px; border-radius: 6px; cursor: pointer; outline: none;">
+                                        ${getOptions(59, origMin)}
+                                    </select>
+                                </div>
                             </div>
                             
                             <div style="display:flex; gap:10px; align-items: flex-end; margin-bottom: 15px;">
@@ -422,11 +438,14 @@
         }
 
         function approveRecord(uuid) {
-            // 📍 核心修改 4：重新組合 日期 + 時間
-            const timeInput = document.getElementById(`timeOnly_${uuid}`);
-            const datePart = timeInput.getAttribute('data-date'); // 抓回隱藏的日期 (例如 2026-03-21)
-            const timePart = timeInput.value;                     // 抓取畫面上選定的時間 (例如 14:30)
-            const newTime = `${datePart}T${timePart}`;            // 組合回 GAS 要的格式
+            // 📍 核心修改：從下拉選單抓出數值並組裝回標準時間格式
+            const hourSelect = document.getElementById(`hour_${uuid}`);
+            const minSelect = document.getElementById(`min_${uuid}`);
+            
+            const datePart = hourSelect.getAttribute('data-date'); 
+            const hourPart = hourSelect.value;
+            const minPart = minSelect.value;
+            const newTime = `${datePart}T${hourPart}:${minPart}`; // 組合回 GAS 要的 2026-03-21T13:40 格式
             
             const multiplier = document.getElementById(`mul_${uuid}`).value;
             const remark = document.getElementById(`rem_${uuid}`).value;
@@ -443,6 +462,7 @@
                 if(result.status === "success") {
                     fetchPendingRecords(); // 重新撈取清單
                 } else {
+                    // 如果後端 GAS 發現時間順序錯誤，就會在這裡跳出警告！
                     alert(result.message);
                     btn.disabled = false; btn.innerText = "✅ 確認核准";
                 }
