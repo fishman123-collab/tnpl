@@ -619,11 +619,16 @@
                     const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px; margin-left:5px;">⭐ 加權 x${r.multiplier}</span>` : "";
                     const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
 
+                    // 📍 核心修改：如果有加權，就在結算時數旁邊顯示灰色的 (原始時數)
+                    const hoursDisplay = r.multiplier > 1 
+                        ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-right:5px;">(原始 ${r.rawHours.toFixed(1)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` 
+                        : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
+
                     container.innerHTML += `
                         <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                                 <div style="font-weight:bold; font-size:16px;">📅 ${r.date}</div>
-                                <div style="font-weight:bold; color:var(--primary-color); font-size:16px;">${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span></div>
+                                <div style="font-weight:bold; color:var(--primary-color); font-size:16px;">${hoursDisplay}</div>
                             </div>
                             <div style="font-size:14px; color:#555; margin-bottom:5px;">⏱️ ${r.startTime} ~ ${r.endTime}</div>
                             <div style="font-size:14px; color:#555;">📍 服務：${r.serviceType} ${multiplierText}</div>
@@ -761,11 +766,16 @@
                         const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px;">⭐ x${r.multiplier}</span>` : "";
                         const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
                         
+                        // 📍 核心修改：同上，加入原始時數的顯示
+                        const hoursDisplay = r.multiplier > 1 
+                            ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-right:5px;">(原始 ${r.rawHours.toFixed(1)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` 
+                            : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
+
                         container.innerHTML += `
                             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                                     <div style="font-weight:bold; font-size:16px;">👤 ${r.volunteerName} <span style="font-size:13px; font-weight:normal; color:#666;">| ${r.date}</span></div>
-                                    <div style="font-weight:bold; color:var(--primary-color); font-size:16px;">${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span></div>
+                                    <div style="font-weight:bold; color:var(--primary-color); font-size:16px;">${hoursDisplay}</div>
                                 </div>
                                 <div style="font-size:13px; color:#555; margin-bottom:5px;">⏱️ ${r.startTime} ~ ${r.endTime} &nbsp; 📍 ${r.serviceType} ${multiplierText}</div>
                                 <div style="font-size:12px; color:#00897b; font-weight:bold; background:#e0f2f1; display:inline-block; padding:3px 8px; border-radius:10px;">✅ 確認館員：${r.staffName}</div>
@@ -818,12 +828,15 @@
 
             if (filtered.length === 0) { alert("這個範圍內沒有資料可匯出！"); return; }
 
-            let csvContent = "\uFEFF"; // 加上 BOM，讓 Excel 打開不會亂碼
-            csvContent += "志工姓名,日期,簽到,簽退,服務內容,加權,結算時數,確認館員,備註\n";
+            let csvContent = "\uFEFF"; 
+            
+            // 📍 核心修改：報表標題加入「原始時數」
+            csvContent += "志工姓名,日期,簽到,簽退,服務內容,原始時數,加權,結算時數,確認館員,備註\n";
             
             filtered.forEach(r => {
                 const safeRemark = r.remark ? r.remark.replace(/"/g, '""') : "";
-                const row = [ r.volunteerName, r.date, r.startTime, r.endTime, r.serviceType, r.multiplier, r.finalHours.toFixed(1), r.staffName, `"${safeRemark}"` ];
+                // 📍 核心修改：把 r.rawHours 塞進報表的對應欄位中
+                const row = [ r.volunteerName, r.date, r.startTime, r.endTime, r.serviceType, r.rawHours.toFixed(1), r.multiplier, r.finalHours.toFixed(1), r.staffName, `"${safeRemark}"` ];
                 csvContent += row.join(",") + "\n";
             });
 
