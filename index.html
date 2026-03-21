@@ -103,7 +103,13 @@
             <button onclick="openRecordsUI()" style="margin-top: 15px; width: 100%; background: #e0f2f1; color: #00897b; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <span>📊</span> 查詢我的服務紀錄
             </button>
+            <button onclick="openRecordsUI()" style="margin-top: 15px; width: 100%; background: #e0f2f1; color: #00897b; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span>📊</span> 查詢我的服務紀錄
+            </button>
             
+            <button id="leaderQueryBtn" onclick="openAdminQueryUI('volunteer')" style="display:none; margin-top: 10px; width: 100%; background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; flex-direction: row; align-items: center; justify-content: center; gap: 8px;">
+                <span>👑</span> 幹部差勤查詢系統
+            </button>
         </div>
 <div id="sectionRecords" class="section">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
@@ -164,8 +170,8 @@
 
         <div id="sectionAdminQuery" class="section">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <button onclick="switchSection(document.getElementById('sectionAdmin'))" style="background:none; border:none; font-size:16px; color:var(--primary-color); font-weight:bold; cursor:pointer;">⬅️ 返回審核</button>
-                <h2 style="margin:0; font-size: 18px;">全體差勤查詢</h2>
+                <button id="adminQueryBackBtn" style="background:none; border:none; font-size:16px; color:var(--primary-color); font-weight:bold; cursor:pointer;">⬅️ 返回</button>
+                <h2 style="margin:0; font-size: 18px;">差勤查詢系統</h2>
             </div>
             
             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
@@ -329,8 +335,20 @@
             switchSection(document.getElementById('sectionCheckIn'));
             document.getElementById('systemSubtitle').innerText = "定位打卡系統";
             document.getElementById('userName').innerText = dbUserName;
-            // 📍 顯示轉換後的組別與職稱
             document.getElementById('userRole').innerText = formatRoleDisplay(group, title);
+
+            // 📍 核心新增：判斷是否為幹部，若是則顯示「幹部查詢按鈕」，並依據身分動態改字
+            const leaderBtn = document.getElementById('leaderQueryBtn');
+            if (title === "大隊長" || title === "副隊長" || title === "小組長" || title === "副小組長") {
+                leaderBtn.style.display = 'flex';
+                if (title === "大隊長" || title === "副隊長") {
+                    leaderBtn.innerHTML = "<span>👑</span> 大隊部：全館差勤查詢";
+                } else {
+                    leaderBtn.innerHTML = `<span>👑</span> 小組長：${group}差勤查詢`;
+                }
+            } else {
+                leaderBtn.style.display = 'none';
+            }
         }
 
         // 📍 更新：打卡按鈕事件 (在主畫面顯示精美收據)
@@ -686,8 +704,18 @@
         let globalRoster = []; // 📍 新增：儲存志工名冊
         let currentAdminQueryTab = 'monthly';
 
-        function openAdminQueryUI() {
+        // 傳入 from 參數，判斷是從哪裡進來的
+        function openAdminQueryUI(from = 'admin') {
             switchSection(document.getElementById('sectionAdminQuery'));
+            
+            // 📍 動態設定返回鍵的目的地
+            const backBtn = document.getElementById('adminQueryBackBtn');
+            if (from === 'volunteer') {
+                backBtn.onclick = () => switchSection(document.getElementById('sectionCheckIn'));
+            } else {
+                backBtn.onclick = () => switchSection(document.getElementById('sectionAdmin'));
+            }
+
             const now = new Date();
             const currentMonth = now.toISOString().slice(0, 7); 
             const currentYear = currentMonth.slice(0, 4);
@@ -700,31 +728,31 @@
                 yearSelect.innerHTML += `<option value="${y}">${y} 年</option>`;
             }
 
-            document.getElementById('adminQueryListContainer').innerHTML = '<p style="text-align:center; color:gray;">正在從雲端載入全館資料 ⏳...</p>';
+            document.getElementById('adminQueryListContainer').innerHTML = '<p style="text-align:center; color:gray;">正在從雲端載入資料 ⏳...</p>';
             
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: "getAllVolunteerRecords" })
+                // 📍 核心新增：把 currentUserId 傳給後端，讓後端當作識別證來檢查權限
+                body: JSON.stringify({ action: "getAllVolunteerRecords", userId: currentUserId })
             }).then(res => res.json()).then(result => {
                 if(result.status === "success") {
                     allAdminQueryRecords = result.data;
                     globalRoster = result.roster; 
                     
-                    // 📍 智慧顯示邏輯 1：先計算名冊中每個名字出現的次數
                     const nameCounts = {};
                     globalRoster.forEach(vol => {
                         nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1;
                     });
 
                     const volSelect = document.getElementById('adminVolSelector');
-                    volSelect.innerHTML = '<option value="ALL">-- 所有志工 --</option>';
+                    // 館員跟大隊長看得到「全館」，小組長看得到「全組」，所以這裡文字改為「-- 所有名單 --」比較通用
+                    volSelect.innerHTML = '<option value="ALL">-- 所有名單 --</option>';
                     
                     globalRoster.forEach(vol => {
                         const val = vol.lineId || `unbound_${Math.random()}`;
                         let displayName = vol.name;
                         
                         if (vol.lineId) {
-                            // 📍 智慧顯示邏輯 2：只有在「同名同姓」且「有手機尾數」時，才加上 (尾數XXXX)
                             if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") {
                                 displayName += ` (尾數${vol.phoneTail})`;
                             }
@@ -736,6 +764,8 @@
                     });
 
                     renderAdminQuery();
+                } else {
+                    alert("載入失敗：" + result.message);
                 }
             }).catch(err => alert("載入失敗，請確認已部署新版本！\n" + err.message));
         }
