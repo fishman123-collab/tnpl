@@ -148,7 +148,21 @@
                     <p id="adminRole" style="margin: 3px 0 0; font-size: 13px; color: var(--secondary-text);">管理員模式已啟動</p>
                 </div>
             </div>
-            <div id="sectionAdminQuery" class="section">
+            
+            <div class="admin-header">
+                <h2>📋 待審核清單</h2>
+                <div>
+                    <button class="refresh-btn" onclick="openAdminQueryUI()" style="background:#e0f2f1; color:#00897b; font-weight:bold; margin-right:5px;">📊 總查詢</button>
+                    <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重整</button>
+                </div>
+            </div>
+
+            <div id="adminRecordsContainer">
+                <p style="text-align:center; color:gray;">載入資料中...</p>
+            </div>
+        </div>
+
+        <div id="sectionAdminQuery" class="section">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
                 <button onclick="switchSection(document.getElementById('sectionAdmin'))" style="background:none; border:none; font-size:16px; color:var(--primary-color); font-weight:bold; cursor:pointer;">⬅️ 返回審核</button>
                 <h2 style="margin:0; font-size: 18px;">全體差勤查詢</h2>
@@ -158,7 +172,7 @@
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">👤 選擇志工：</label>
                 <select id="adminVolSelector" onchange="renderAdminQuery()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
                     <option value="ALL">-- 所有志工 --</option>
-                    </select>
+                </select>
 
                 <div style="display: flex; gap: 10px;">
                     <button id="adminTabMonthly" onclick="switchAdminQueryTab('monthly')" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--primary-color); color:white; font-weight:bold; cursor:pointer;">📅 單月</button>
@@ -185,20 +199,6 @@
 
             <div id="adminQueryListContainer"></div>
         </div>
-            <div class="admin-header">
-                <h2>📋 待審核清單</h2>
-                <div>
-                    <button class="refresh-btn" onclick="openAdminQueryUI()" style="background:#e0f2f1; color:#00897b; font-weight:bold; margin-right:5px;">📊 總查詢</button>
-                    <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重整</button>
-                </div>
-            </div>
-                <h2>📋 待審核清單</h2>
-                <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重新整理</button>
-            </div>
-            <div id="adminRecordsContainer">
-                <p style="text-align:center; color:gray;">載入資料中...</p>
-            </div>
-        </div>
 
     </div>
 
@@ -214,12 +214,12 @@
     <script>
         const LIFF_ID = "2008914129-7KGP9Yxy"; 
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
-let currentUserId = "";
-        let dbUserName = ""; 
-        let globalGroup = ""; // 📍 記住目前的組別
-        let globalTitle = ""; // 📍 記住目前的職稱
+
         let currentUserId = "";
         let dbUserName = ""; 
+        let globalGroup = ""; 
+        let globalTitle = ""; 
+
         const froggySuccessImg = `<img src="DK1.png" alt="成功" style="height:100px; margin-bottom:15px;">`;
         const froggyErrorImg = `<img src="DK2.png" alt="失敗" style="height:100px; margin-bottom:15px;">`;
 
@@ -776,7 +776,6 @@ let currentUserId = "";
                 filtered = filtered.filter(r => r.year === selectedYear);
                 const monthlySums = {}; 
                 filtered.forEach(r => {
-                    yearTotal += r.finalHours; // Wait, totalHours should be used
                     totalHours += r.finalHours;
                     if (!monthlySums[r.yearMonth]) monthlySums[r.yearMonth] = 0;
                     monthlySums[r.yearMonth] += r.finalHours;
