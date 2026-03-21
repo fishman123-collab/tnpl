@@ -235,6 +235,9 @@
                         const borderColor = record.checkType === '簽到' ? 'sign-in' : 'sign-out';
                         card.className = `record-card ${borderColor}`;
                         
+                        // 📍 新增：將 GAS 傳來的 2026-03-21T13:40 轉換為 2026/03/21 13:40 的純文字格式
+                        const displayTime = record.timestamp.replace('T', ' ').replace(/-/g, '/');
+                        
                         card.innerHTML = `
                             <div class="record-title">
                                 <span>👤 ${record.volunteerName}</span>
@@ -242,7 +245,12 @@
                             </div>
                             <div style="font-size:14px; margin-bottom:10px; color:#555;">📍 服務內容：${record.serviceType}</div>
                             
-                            <label style="font-size:13px; font-weight:bold;">校正時間 (預設為原始打卡時間)：</label>
+                            <div style="font-size:14px; margin-bottom:5px; background: #f8f9fa; padding: 8px; border-radius: 6px;">
+                                <span style="font-weight:bold;">🕒 原始時間：</span> 
+                                <span style="color:var(--primary-color); font-weight:bold; font-size: 16px;">${displayTime}</span>
+                            </div>
+                            
+                            <label style="font-size:13px; font-weight:bold; color:var(--secondary-text); display:block; margin-bottom:3px;">✏️ 校正時間 (若無誤請維持原狀)：</label>
                             <input type="datetime-local" id="time_${record.uuid}" value="${record.timestamp}">
                             
                             <div style="display:flex; gap:10px;">
