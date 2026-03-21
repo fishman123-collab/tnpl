@@ -54,6 +54,7 @@
             <div class="logo-placeholder">📍</div>
             <h1>志工服務中心</h1>
             <p id="systemSubtitle">系統連線中...</p>
+            <button id="sysAdminToggleBtn" onclick="toggleViewMode()" style="display:none; margin: 10px auto 0; background: #333; color: #fff; border: none; padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight:bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">🔄 切換為志工視角</button>
         </div>
 
         <div id="sectionLoading" class="section active" style="text-align: center;">
@@ -147,8 +148,50 @@
                     <p id="adminRole" style="margin: 3px 0 0; font-size: 13px; color: var(--secondary-text);">管理員模式已啟動</p>
                 </div>
             </div>
+            <div id="sectionAdminQuery" class="section">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <button onclick="switchSection(document.getElementById('sectionAdmin'))" style="background:none; border:none; font-size:16px; color:var(--primary-color); font-weight:bold; cursor:pointer;">⬅️ 返回審核</button>
+                <h2 style="margin:0; font-size: 18px;">全體差勤查詢</h2>
+            </div>
             
+            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">👤 選擇志工：</label>
+                <select id="adminVolSelector" onchange="renderAdminQuery()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
+                    <option value="ALL">-- 所有志工 --</option>
+                    </select>
+
+                <div style="display: flex; gap: 10px;">
+                    <button id="adminTabMonthly" onclick="switchAdminQueryTab('monthly')" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--primary-color); color:white; font-weight:bold; cursor:pointer;">📅 單月</button>
+                    <button id="adminTabYearly" onclick="switchAdminQueryTab('yearly')" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ccc; background:white; color:var(--text-color); font-weight:bold; cursor:pointer;">📈 年度</button>
+                </div>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px; text-align: center;">
+                <div id="adminMonthSelectWrapper">
+                    <input type="month" id="adminMonthSelector" onchange="renderAdminQuery()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing:border-box;">
+                </div>
+                <div id="adminYearSelectWrapper" style="display:none;">
+                    <select id="adminYearSelector" onchange="renderAdminQuery()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing:border-box;"></select>
+                </div>
+                
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="text-align:left;">
+                        <span style="font-size: 13px; color: var(--secondary-text);">查詢範圍總計</span>
+                        <div id="adminQueryTotalHours" style="font-size: 24px; font-weight: bold; color: var(--primary-color);">0.0 <span style="font-size:14px;">hr</span></div>
+                    </div>
+                    <button onclick="exportAdminQueryCSV()" style="background:#166534; color:white; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">📥 匯出 CSV 報表</button>
+                </div>
+            </div>
+
+            <div id="adminQueryListContainer"></div>
+        </div>
             <div class="admin-header">
+                <h2>📋 待審核清單</h2>
+                <div>
+                    <button class="refresh-btn" onclick="openAdminQueryUI()" style="background:#e0f2f1; color:#00897b; font-weight:bold; margin-right:5px;">📊 總查詢</button>
+                    <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重整</button>
+                </div>
+            </div>
                 <h2>📋 待審核清單</h2>
                 <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重新整理</button>
             </div>
@@ -171,7 +214,10 @@
     <script>
         const LIFF_ID = "2008914129-7KGP9Yxy"; 
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
-
+let currentUserId = "";
+        let dbUserName = ""; 
+        let globalGroup = ""; // 📍 記住目前的組別
+        let globalTitle = ""; // 📍 記住目前的職稱
         let currentUserId = "";
         let dbUserName = ""; 
         const froggySuccessImg = `<img src="DK1.png" alt="成功" style="height:100px; margin-bottom:15px;">`;
@@ -225,17 +271,33 @@
             }).then(res => res.json()).then(result => {
                 if (result.status === "bound") {
                     dbUserName = result.name;
+                    globalGroup = result.group; 
+                    globalTitle = result.title;
                     if (result.role === "staff") {
-                        // 📍 帶入組別與職稱
-                        setupAdminUI(result.group, result.title); 
+                        setupAdminUI(globalGroup, globalTitle); 
                     } else {
-                        setupCheckInUI(result.group, result.title);
+                        setupCheckInUI(globalGroup, globalTitle);
                     }
                 } else {
                     switchSection(document.getElementById('sectionBind'));
                     document.getElementById('systemSubtitle').innerText = "首次使用驗證";
                 }
             });
+        }
+        // 📍 系統管理員：一鍵切換視角功能
+        let isViewAsVolunteer = false;
+        function toggleViewMode() {
+            isViewAsVolunteer = !isViewAsVolunteer;
+            const btn = document.getElementById('sysAdminToggleBtn');
+            if (isViewAsVolunteer) {
+                btn.innerText = "🔄 切換回館員視角";
+                btn.style.background = "var(--primary-color)";
+                setupCheckInUI(globalGroup, globalTitle);
+            } else {
+                btn.innerText = "🔄 切換為志工視角";
+                btn.style.background = "#333";
+                setupAdminUI(globalGroup, globalTitle);
+            }
         }
 
         // 📍 2. 替換 bindBtn 點擊事件 (同上，綁定成功時也要傳遞參數)
@@ -338,17 +400,16 @@
             document.getElementById('systemSubtitle').innerText = "館員管理中心";
             document.getElementById('staffName').innerText = "您好，" + dbUserName;
             
-            // 📍 新增：處理館員職稱顯示邏輯
-            let displayRole = "管理員模式已啟動"; // 預設防呆文字
+            // 如果是系統管理員，顯示最上方的切換神鍵
+            if (title === "系統管理員") {
+                document.getElementById('sysAdminToggleBtn').style.display = 'block';
+            }
+
+            let displayRole = "管理員模式已啟動";
             if (group && title) {
-                if (title === "系統管理員") {
-                    displayRole = `系統管理員 (所屬：${group})`;
-                } else {
-                    displayRole = `${group} - ${title}`; // 例如：推廣組 - 志工管理員
-                }
+                displayRole = title === "系統管理員" ? `系統管理員 (所屬：${group})` : `${group} - ${title}`;
             }
             document.getElementById('adminRole').innerText = displayRole;
-
             fetchPendingRecords();
         }
 
@@ -608,6 +669,173 @@
             }
             document.getElementById('yearlyTotalHours').innerText = yearTotal.toFixed(1);
         }
+
+// ==========================================
+        // 📍 館員全體差勤查詢與報表匯出邏輯
+        // ==========================================
+        let allAdminQueryRecords = [];
+        let currentAdminQueryTab = 'monthly';
+
+        function openAdminQueryUI() {
+            switchSection(document.getElementById('sectionAdminQuery'));
+            const now = new Date();
+            const currentMonth = now.toISOString().slice(0, 7); 
+            const currentYear = currentMonth.slice(0, 4);
+            
+            document.getElementById('adminMonthSelector').value = currentMonth;
+            
+            const yearSelect = document.getElementById('adminYearSelector');
+            yearSelect.innerHTML = "";
+            for (let y = parseInt(currentYear); y >= parseInt(currentYear) - 2; y--) {
+                yearSelect.innerHTML += `<option value="${y}">${y} 年</option>`;
+            }
+
+            document.getElementById('adminQueryListContainer').innerHTML = '<p style="text-align:center; color:gray;">正在從雲端載入全館資料 ⏳...</p>';
+            
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "getAllVolunteerRecords" })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") {
+                    allAdminQueryRecords = result.data;
+                    
+                    // 動態產生下拉志工名單 (過濾出有紀錄的志工，並且不重複)
+                    const uniqueVolunteers = [...new Set(allAdminQueryRecords.map(item => item.volunteerName))];
+                    const volSelect = document.getElementById('adminVolSelector');
+                    volSelect.innerHTML = '<option value="ALL">-- 所有志工 --</option>';
+                    uniqueVolunteers.forEach(vol => {
+                        volSelect.innerHTML += `<option value="${vol}">${vol}</option>`;
+                    });
+
+                    renderAdminQuery();
+                }
+            });
+        }
+
+        function switchAdminQueryTab(tab) {
+            currentAdminQueryTab = tab;
+            const btnMonthly = document.getElementById('adminTabMonthly');
+            const btnYearly = document.getElementById('adminTabYearly');
+            
+            if (tab === 'monthly') {
+                btnMonthly.style.background = 'var(--primary-color)'; btnMonthly.style.color = 'white'; btnMonthly.style.border = 'none';
+                btnYearly.style.background = 'white'; btnYearly.style.color = 'var(--text-color)'; btnYearly.style.border = '1px solid #ccc';
+                document.getElementById('adminMonthSelectWrapper').style.display = 'block';
+                document.getElementById('adminYearSelectWrapper').style.display = 'none';
+            } else {
+                btnYearly.style.background = 'var(--text-color)'; btnYearly.style.color = 'white'; btnYearly.style.border = 'none';
+                btnMonthly.style.background = 'white'; btnMonthly.style.color = 'var(--text-color)'; btnMonthly.style.border = '1px solid #ccc';
+                document.getElementById('adminYearSelectWrapper').style.display = 'block';
+                document.getElementById('adminMonthSelectWrapper').style.display = 'none';
+            }
+            renderAdminQuery();
+        }
+
+        function renderAdminQuery() {
+            const container = document.getElementById('adminQueryListContainer');
+            container.innerHTML = "";
+            let totalHours = 0;
+
+            const selectedVol = document.getElementById('adminVolSelector').value;
+            const selectedMonth = document.getElementById('adminMonthSelector').value;
+            const selectedYear = document.getElementById('adminYearSelector').value;
+
+            // 1. 先篩選志工
+            let filtered = allAdminQueryRecords;
+            if (selectedVol !== "ALL") {
+                filtered = filtered.filter(r => r.volunteerName === selectedVol);
+            }
+
+            // 2. 依照頁籤篩選時間
+            if (currentAdminQueryTab === 'monthly') {
+                filtered = filtered.filter(r => r.yearMonth === selectedMonth);
+                
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">無符合條件的紀錄。</div>`;
+                } else {
+                    filtered.forEach(r => {
+                        totalHours += r.finalHours;
+                        const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px;">⭐ x${r.multiplier}</span>` : "";
+                        const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
+                        
+                        container.innerHTML += `
+                            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <div style="font-weight:bold; font-size:16px;">👤 ${r.volunteerName} <span style="font-size:13px; font-weight:normal; color:#666;">| ${r.date}</span></div>
+                                    <div style="font-weight:bold; color:var(--primary-color); font-size:16px;">${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span></div>
+                                </div>
+                                <div style="font-size:13px; color:#555; margin-bottom:5px;">⏱️ ${r.startTime} ~ ${r.endTime} &nbsp; 📍 ${r.serviceType} ${multiplierText}</div>
+                                <div style="font-size:12px; color:#00897b; font-weight:bold; background:#e0f2f1; display:inline-block; padding:3px 8px; border-radius:10px;">✅ 確認館員：${r.staffName}</div>
+                                ${remarkHtml}
+                            </div>
+                        `;
+                    });
+                }
+            } else {
+                // 年度邏輯：我們以「月份」來做群組加總 (不管是否選了特定志工，都加總)
+                filtered = filtered.filter(r => r.year === selectedYear);
+                const monthlySums = {}; 
+                filtered.forEach(r => {
+                    yearTotal += r.finalHours; // Wait, totalHours should be used
+                    totalHours += r.finalHours;
+                    if (!monthlySums[r.yearMonth]) monthlySums[r.yearMonth] = 0;
+                    monthlySums[r.yearMonth] += r.finalHours;
+                });
+
+                if (Object.keys(monthlySums).length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">該年度無紀錄。</div>`;
+                } else {
+                    const sortedMonths = Object.keys(monthlySums).sort().reverse();
+                    sortedMonths.forEach(ym => {
+                        const [, month] = ym.split('-');
+                        const titleText = selectedVol === "ALL" ? `全館 ${month} 月份總計` : `👤 ${selectedVol} ${month} 月份總計`;
+                        container.innerHTML += `
+                            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid #d97706;">
+                                <div style="font-weight:bold; font-size:15px;">📅 ${titleText}</div>
+                                <div style="font-weight:bold; color:#d97706; font-size:18px;">${monthlySums[ym].toFixed(1)} <span style="font-size:13px;">hr</span></div>
+                            </div>
+                        `;
+                    });
+                }
+            }
+            document.getElementById('adminQueryTotalHours').innerText = totalHours.toFixed(1);
+        }
+
+        // 📍 匯出成 Excel 可開的 CSV 報表
+        function exportAdminQueryCSV() {
+            if (allAdminQueryRecords.length === 0) { alert("目前沒有資料可以匯出！"); return; }
+            
+            const selectedVol = document.getElementById('adminVolSelector').value;
+            const selectedMonth = document.getElementById('adminMonthSelector').value;
+            const selectedYear = document.getElementById('adminYearSelector').value;
+            
+            let filtered = allAdminQueryRecords;
+            if (selectedVol !== "ALL") filtered = filtered.filter(r => r.volunteerName === selectedVol);
+            if (currentAdminQueryTab === 'monthly') filtered = filtered.filter(r => r.yearMonth === selectedMonth);
+            else filtered = filtered.filter(r => r.year === selectedYear);
+
+            if (filtered.length === 0) { alert("這個範圍內沒有資料可匯出！"); return; }
+
+            let csvContent = "\uFEFF"; // 加上 BOM，讓 Excel 打開不會亂碼
+            csvContent += "志工姓名,日期,簽到,簽退,服務內容,加權,結算時數,確認館員,備註\n";
+            
+            filtered.forEach(r => {
+                const safeRemark = r.remark ? r.remark.replace(/"/g, '""') : "";
+                const row = [ r.volunteerName, r.date, r.startTime, r.endTime, r.serviceType, r.multiplier, r.finalHours.toFixed(1), r.staffName, `"${safeRemark}"` ];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const fileName = currentAdminQueryTab === 'monthly' ? `${selectedMonth}_差勤報表.csv` : `${selectedYear}_年度差勤報表.csv`;
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
     </script>
 </body>
 </html>
