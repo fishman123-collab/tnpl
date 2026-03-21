@@ -105,7 +105,7 @@
             <div class="profile-card" style="margin-bottom: 15px; padding: 15px;">
                 <div>
                     <h2 id="staffName" style="margin: 0; font-size: 18px;">館員您好</h2>
-                    <p style="margin: 3px 0 0; font-size: 13px; color: var(--secondary-text);">管理員模式已啟動</p>
+                    <p id="adminRole" style="margin: 3px 0 0; font-size: 13px; color: var(--secondary-text);">管理員模式已啟動</p>
                 </div>
             </div>
             
@@ -168,6 +168,7 @@
             }
         }
 
+        // 📍 1. 替換 checkBindingStatus 函數 (讓它能把 group 和 title 傳給館員介面)
         function checkBindingStatus() {
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -176,9 +177,9 @@
                 if (result.status === "bound") {
                     dbUserName = result.name;
                     if (result.role === "staff") {
-                        setupAdminUI();
-                    } else {
                         // 📍 帶入組別與職稱
+                        setupAdminUI(result.group, result.title); 
+                    } else {
                         setupCheckInUI(result.group, result.title);
                     }
                 } else {
@@ -188,6 +189,7 @@
             });
         }
 
+        // 📍 2. 替換 bindBtn 點擊事件 (同上，綁定成功時也要傳遞參數)
         document.getElementById('bindBtn').addEventListener('click', () => {
             const phone = document.getElementById('phoneInput').value;
             fetch(GAS_URL, {
@@ -198,9 +200,9 @@
                     dbUserName = result.name;
                     alert("綁定成功！歡迎，" + dbUserName);
                     if (result.role === "staff") {
-                        setupAdminUI();
-                    } else {
                         // 📍 帶入組別與職稱
+                        setupAdminUI(result.group, result.title); 
+                    } else {
                         setupCheckInUI(result.group, result.title);
                     }
                 } else alert(result.message);
@@ -281,11 +283,23 @@
             );
         });
 
-        // --- 館員管理後台 UI ---
-        function setupAdminUI() {
+        // 📍 3. 替換 setupAdminUI 函數 (加入館員專屬的文字轉換邏輯)
+        function setupAdminUI(group, title) {
             switchSection(document.getElementById('sectionAdmin'));
             document.getElementById('systemSubtitle').innerText = "館員管理中心";
             document.getElementById('staffName').innerText = "您好，" + dbUserName;
+            
+            // 📍 新增：處理館員職稱顯示邏輯
+            let displayRole = "管理員模式已啟動"; // 預設防呆文字
+            if (group && title) {
+                if (title === "系統管理員") {
+                    displayRole = `系統管理員 (所屬：${group})`;
+                } else {
+                    displayRole = `${group} - ${title}`; // 例如：推廣組 - 志工管理員
+                }
+            }
+            document.getElementById('adminRole').innerText = displayRole;
+
             fetchPendingRecords();
         }
 
