@@ -191,15 +191,29 @@
             
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
+                    const checkType = document.querySelector('input[name="checkType"]:checked').value;
+                    const serviceType = document.getElementById('serviceSelect').value;
+
                     fetch(GAS_URL, {
                         method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, 
                         body: JSON.stringify({
                             action: "checkIn", userId: currentUserId, lat: pos.coords.latitude, lng: pos.coords.longitude,
-                            serviceType: document.getElementById('serviceSelect').value,
-                            checkType: document.querySelector('input[name="checkType"]:checked').value
+                            serviceType: serviceType,
+                            checkType: checkType
                         })
                     }).then(res => res.json()).then(result => {
-                        showPopup(result.status === "success", result.status === "success" ? "打卡成功！" : "打卡失敗", result.message);
+                        if (result.status === "success") {
+                            // 📍 核心修改：組合詳細的打卡資訊
+                            const timeStr = new Date().toLocaleTimeString('zh-TW', { hour12: false }); 
+                            // result.distance 會從後端傳過來（見下一步 GAS 修改）
+                            const distanceInfo = result.distance !== undefined ? `\n📏 距離：${result.distance} 公尺` : "";
+                            
+                            const detailMsg = `👤 姓名：${dbUserName}\n📋 服務：${serviceType}\n⏱️ 狀態：${checkType}${distanceInfo}\n⏰ 時間：${timeStr}`;
+                            
+                            showPopup(true, "打卡成功！", detailMsg);
+                        } else {
+                            showPopup(false, "打卡失敗", result.message);
+                        }
                         btn.disabled = false; btnText.innerText = "點我打卡";
                     });
                 },
@@ -235,8 +249,15 @@
                         const borderColor = record.checkType === '簽到' ? 'sign-in' : 'sign-out';
                         card.className = `record-card ${borderColor}`;
                         
-                        // 📍 新增：將 GAS 傳來的 2026-03-21T13:40 轉換為 2026/03/21 13:40 的純文字格式
                         const displayTime = record.timestamp.replace('T', ' ').replace(/-/g, '/');
+                        
+                        // 📍 核心修改：判斷是否為「簽到」，若是才顯示加權欄位，否則隱藏
+                        const multiplierHtml = record.checkType === '簽到' 
+                            ? `<div style="flex:1;">
+                                   <label style="font-size:13px; font-weight:bold;">時數加權：</label>
+                                   <input type="number" id="mul_${record.uuid}" value="1" step="0.5" min="1">
+                               </div>`
+                            : `<input type="hidden" id="mul_${record.uuid}" value="1">`; 
                         
                         card.innerHTML = `
                             <div class="record-title">
@@ -254,10 +275,7 @@
                             <input type="datetime-local" id="time_${record.uuid}" value="${record.timestamp}">
                             
                             <div style="display:flex; gap:10px;">
-                                <div style="flex:1;">
-                                    <label style="font-size:13px; font-weight:bold;">時數加權：</label>
-                                    <input type="number" id="mul_${record.uuid}" value="1" step="0.5" min="1">
-                                </div>
+                                ${multiplierHtml}
                                 <div style="flex:2;">
                                     <label style="font-size:13px; font-weight:bold;">館員備註：</label>
                                     <input type="text" id="rem_${record.uuid}" placeholder="選填">
