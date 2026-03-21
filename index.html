@@ -193,7 +193,11 @@
                         <span style="font-size: 13px; color: var(--secondary-text);">查詢範圍總計</span>
                         <div id="adminQueryTotalHours" style="font-size: 24px; font-weight: bold; color: var(--primary-color);">0.0 <span style="font-size:14px;">hr</span></div>
                     </div>
-                    <button onclick="exportAdminQueryCSV()" style="background:#166534; color:white; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">📥 匯出 CSV 報表</button>
+                    
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button onclick="exportAdminQueryCSV()" style="background:#166534; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">📥 匯出明細報表</button>
+                        <button id="exportSummaryBtn" onclick="exportYearlySummaryCSV()" style="display:none; background:#d97706; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">📊 匯出年度總表</button>
+                    </div>
                 </div>
             </div>
 
@@ -679,6 +683,7 @@
         // 📍 館員全體差勤查詢與報表匯出邏輯
         // ==========================================
         let allAdminQueryRecords = [];
+        let globalRoster = []; // 📍 新增：儲存志工名冊
         let currentAdminQueryTab = 'monthly';
 
         function openAdminQueryUI() {
@@ -703,21 +708,21 @@
             }).then(res => res.json()).then(result => {
                 if(result.status === "success") {
                     allAdminQueryRecords = result.data;
+                    globalRoster = result.roster; // 儲存名冊
                     
-                    // 動態產生下拉志工名單 (過濾出有紀錄的志工，並且不重複)
-                    const uniqueVolunteers = [...new Set(allAdminQueryRecords.map(item => item.volunteerName))];
+                    // 📍 核心修改：使用志工名冊動態生成下拉選單 (以 userId 為 value)
                     const volSelect = document.getElementById('adminVolSelector');
                     volSelect.innerHTML = '<option value="ALL">-- 所有志工 --</option>';
-                    uniqueVolunteers.forEach(vol => {
-                        volSelect.innerHTML += `<option value="${vol}">${vol}</option>`;
+                    globalRoster.forEach(vol => {
+                        // 解決同名同姓：顯示「姓名(手機尾數)」。若無 LINE ID 則視為未綁定。
+                        const val = vol.lineId || `unbound_${Math.random()}`;
+                        const displayName = vol.lineId ? `${vol.name} (尾數${vol.phoneTail})` : `${vol.name} (尚未綁定)`;
+                        volSelect.innerHTML += `<option value="${val}">${displayName}</option>`;
                     });
 
                     renderAdminQuery();
                 }
-            }).catch(err => {
-                // 📍 加入防呆警報器：如果連線失敗或抓不到資料，會明確跳出警告
-                alert("獲取資料失敗，請確認 GAS 是否有成功『建立新版本』！\n錯誤細節：" + err.message);
-            });
+            }).catch(err => alert("載入失敗，請確認已部署新版本！\n" + err.message));
         }
 
         function switchAdminQueryTab(tab) {
@@ -730,11 +735,13 @@
                 btnYearly.style.background = 'white'; btnYearly.style.color = 'var(--text-color)'; btnYearly.style.border = '1px solid #ccc';
                 document.getElementById('adminMonthSelectWrapper').style.display = 'block';
                 document.getElementById('adminYearSelectWrapper').style.display = 'none';
+                document.getElementById('exportSummaryBtn').style.display = 'none'; // 隱藏年度總表按鈕
             } else {
                 btnYearly.style.background = 'var(--text-color)'; btnYearly.style.color = 'white'; btnYearly.style.border = 'none';
                 btnMonthly.style.background = 'white'; btnMonthly.style.color = 'var(--text-color)'; btnMonthly.style.border = '1px solid #ccc';
                 document.getElementById('adminYearSelectWrapper').style.display = 'block';
                 document.getElementById('adminMonthSelectWrapper').style.display = 'none';
+                document.getElementById('exportSummaryBtn').style.display = 'block'; // 顯示年度總表按鈕
             }
             renderAdminQuery();
         }
@@ -744,14 +751,14 @@
             container.innerHTML = "";
             let totalHours = 0;
 
-            const selectedVol = document.getElementById('adminVolSelector').value;
+            const selectedVolId = document.getElementById('adminVolSelector').value;
             const selectedMonth = document.getElementById('adminMonthSelector').value;
             const selectedYear = document.getElementById('adminYearSelector').value;
 
-            // 1. 先篩選志工
+            // 1. 先篩選志工 (📍 核心修改：改用 userId 篩選)
             let filtered = allAdminQueryRecords;
-            if (selectedVol !== "ALL") {
-                filtered = filtered.filter(r => r.volunteerName === selectedVol);
+            if (selectedVolId !== "ALL") {
+                filtered = filtered.filter(r => r.userId === selectedVolId);
             }
 
             // 2. 依照頁籤篩選時間
@@ -766,7 +773,6 @@
                         const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px;">⭐ x${r.multiplier}</span>` : "";
                         const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
                         
-                        // 📍 核心修改：同上，加入原始時數的顯示
                         const hoursDisplay = r.multiplier > 1 
                             ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-right:5px;">(原始 ${r.rawHours.toFixed(1)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` 
                             : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
@@ -785,7 +791,7 @@
                     });
                 }
             } else {
-                // 年度邏輯：我們以「月份」來做群組加總 (不管是否選了特定志工，都加總)
+                // 年度邏輯
                 filtered = filtered.filter(r => r.year === selectedYear);
                 const monthlySums = {}; 
                 filtered.forEach(r => {
@@ -798,9 +804,14 @@
                     container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">該年度無紀錄。</div>`;
                 } else {
                     const sortedMonths = Object.keys(monthlySums).sort().reverse();
+                    
+                    // 找出選單目前的文字 (例如：陳小明(5678))
+                    const selElement = document.getElementById('adminVolSelector');
+                    const selectedNameText = selElement.options[selElement.selectedIndex].text;
+
                     sortedMonths.forEach(ym => {
                         const [, month] = ym.split('-');
-                        const titleText = selectedVol === "ALL" ? `全館 ${month} 月份總計` : `👤 ${selectedVol} ${month} 月份總計`;
+                        const titleText = selectedVolId === "ALL" ? `全館 ${month} 月份總計` : `👤 ${selectedNameText} ${month} 月份總計`;
                         container.innerHTML += `
                             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid #d97706;">
                                 <div style="font-weight:bold; font-size:15px;">📅 ${titleText}</div>
@@ -813,29 +824,26 @@
             document.getElementById('adminQueryTotalHours').innerText = totalHours.toFixed(1);
         }
 
-        // 📍 匯出成 Excel 可開的 CSV 報表
+        // 📍 匯出 CSV 明細報表 (改用 userId 篩選)
         function exportAdminQueryCSV() {
             if (allAdminQueryRecords.length === 0) { alert("目前沒有資料可以匯出！"); return; }
             
-            const selectedVol = document.getElementById('adminVolSelector').value;
+            const selectedVolId = document.getElementById('adminVolSelector').value;
             const selectedMonth = document.getElementById('adminMonthSelector').value;
             const selectedYear = document.getElementById('adminYearSelector').value;
             
             let filtered = allAdminQueryRecords;
-            if (selectedVol !== "ALL") filtered = filtered.filter(r => r.volunteerName === selectedVol);
+            if (selectedVolId !== "ALL") filtered = filtered.filter(r => r.userId === selectedVolId);
             if (currentAdminQueryTab === 'monthly') filtered = filtered.filter(r => r.yearMonth === selectedMonth);
             else filtered = filtered.filter(r => r.year === selectedYear);
 
             if (filtered.length === 0) { alert("這個範圍內沒有資料可匯出！"); return; }
 
             let csvContent = "\uFEFF"; 
-            
-            // 📍 核心修改：報表標題加入「原始時數」
             csvContent += "志工姓名,日期,簽到,簽退,服務內容,原始時數,加權,結算時數,確認館員,備註\n";
             
             filtered.forEach(r => {
                 const safeRemark = r.remark ? r.remark.replace(/"/g, '""') : "";
-                // 📍 核心修改：把 r.rawHours 塞進報表的對應欄位中
                 const row = [ r.volunteerName, r.date, r.startTime, r.endTime, r.serviceType, r.rawHours.toFixed(1), r.multiplier, r.finalHours.toFixed(1), r.staffName, `"${safeRemark}"` ];
                 csvContent += row.join(",") + "\n";
             });
@@ -844,8 +852,46 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.setAttribute("href", url);
-            const fileName = currentAdminQueryTab === 'monthly' ? `${selectedMonth}_差勤報表.csv` : `${selectedYear}_年度差勤報表.csv`;
+            const fileName = currentAdminQueryTab === 'monthly' ? `${selectedMonth}_差勤明細.csv` : `${selectedYear}_年度差勤明細.csv`;
             link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 📍 核心新增：匯出年度總結算表 (矩陣表)
+        function exportYearlySummaryCSV() {
+            if (globalRoster.length === 0) { alert("無法取得志工名冊資料！"); return; }
+            
+            const selectedYear = document.getElementById('adminYearSelector').value;
+            let csvContent = "\uFEFF"; 
+            csvContent += "志工姓名,1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月,年度總計\n";
+
+            // 針對名冊上的「每一個人」去計算他的 1~12 月時數
+            globalRoster.forEach(vol => {
+                let monthlyHours = Array(12).fill(0);
+                let yearlyTotal = 0;
+
+                // 只有已綁定 (有 LINE ID) 的志工才可能有打卡紀錄
+                if (vol.lineId) {
+                    const volRecords = allAdminQueryRecords.filter(r => r.userId === vol.lineId && r.year === selectedYear);
+                    volRecords.forEach(r => {
+                        const monthIndex = parseInt(r.yearMonth.split('-')[1], 10) - 1; // 把 "2026-03" 轉成陣列索引 2
+                        monthlyHours[monthIndex] += r.finalHours;
+                        yearlyTotal += r.finalHours;
+                    });
+                }
+
+                const displayName = `${vol.name}(${vol.phoneTail})`;
+                const row = [displayName, ...monthlyHours.map(h => h.toFixed(1)), yearlyTotal.toFixed(1)];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${selectedYear}_年度時數總表.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
