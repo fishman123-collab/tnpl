@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>志工服務中心</title>
+    <title>新總館志工「書香閱時光」平台</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root { --primary-color: #00B900; --bg-color: #F4F7F6; --text-color: #333333; --secondary-text: #777777; --shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -331,7 +331,7 @@
         // --- 志工打卡 UI ---
         function setupCheckInUI(group, title) {
             switchSection(document.getElementById('sectionCheckIn'));
-            document.getElementById('systemSubtitle').innerText = "定位打卡系統";
+            document.getElementById('systemSubtitle').innerText = "定位打卡/時數查詢系統";
             document.getElementById('userName').innerText = dbUserName;
             document.getElementById('userRole').innerText = formatRoleDisplay(group, title);
 
