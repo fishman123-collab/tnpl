@@ -322,13 +322,18 @@
                         const borderColor = record.checkType === '簽到' ? 'sign-in' : 'sign-out';
                         card.className = `record-card ${borderColor}`;
                         
-                        const displayTime = record.timestamp.replace('T', ' ').replace(/-/g, '/');
+                        // 📍 核心修改 1：依據簽到退狀態，改變文字標籤
+                        const timeLabel = record.checkType === '簽到' ? '簽到時間' : '簽退時間';
                         
-                        // 📍 核心修改：判斷是否為「簽到」，若是才顯示加權欄位，否則隱藏
+                        // 📍 核心修改 2：將日期與時間拆開
+                        const [datePart, timePart] = record.timestamp.split('T');
+                        const displayDate = datePart.replace(/-/g, '/'); // 變成 2026/03/21
+                        
+                        // 判斷是否為「簽到」，若是才顯示加權欄位，否則隱藏
                         const multiplierHtml = record.checkType === '簽到' 
                             ? `<div style="flex:1;">
-                                   <label style="font-size:13px; font-weight:bold;">時數加權：</label>
-                                   <input type="number" id="mul_${record.uuid}" value="1" step="0.5" min="1">
+                                   <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">加權：</label>
+                                   <input type="number" id="mul_${record.uuid}" value="1" step="0.5" min="1" style="margin:0; padding:8px;">
                                </div>`
                             : `<input type="hidden" id="mul_${record.uuid}" value="1">`; 
                         
@@ -337,21 +342,21 @@
                                 <span>👤 ${record.volunteerName}</span>
                                 <span class="record-tag">${record.checkType}</span>
                             </div>
-                            <div style="font-size:14px; margin-bottom:10px; color:#555;">📍 服務內容：${record.serviceType}</div>
+                            <div style="font-size:14px; margin-bottom:12px; color:#555;">📍 服務內容：${record.serviceType}</div>
                             
-                            <div style="font-size:14px; margin-bottom:5px; background: #f8f9fa; padding: 8px; border-radius: 6px;">
-                                <span style="font-weight:bold;">🕒 原始時間：</span> 
-                                <span style="color:var(--primary-color); font-weight:bold; font-size: 16px;">${displayTime}</span>
+                            <div style="font-size:14px; margin-bottom:15px; background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
+                                <span style="font-weight:bold; color:#166534;">🕒 ${timeLabel}：</span> 
+                                <span style="color:#166534; margin-right: 5px;">${displayDate}</span>
+                                
+                                <input type="time" id="timeOnly_${record.uuid}" data-date="${datePart}" value="${timePart}" 
+                                    style="border: 1px solid #00B900; color: #00B900; font-weight: bold; font-size: 16px; background: white; padding: 4px 8px; border-radius: 6px; cursor: pointer; width: auto; margin:0; outline: none;">
                             </div>
                             
-                            <label style="font-size:13px; font-weight:bold; color:var(--secondary-text); display:block; margin-bottom:3px;">✏️ 校正時間 (若無誤請維持原狀)：</label>
-                            <input type="datetime-local" id="time_${record.uuid}" value="${record.timestamp}">
-                            
-                            <div style="display:flex; gap:10px;">
+                            <div style="display:flex; gap:10px; align-items: flex-end; margin-bottom: 15px;">
                                 ${multiplierHtml}
                                 <div style="flex:2;">
-                                    <label style="font-size:13px; font-weight:bold;">館員備註：</label>
-                                    <input type="text" id="rem_${record.uuid}" placeholder="選填">
+                                    <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">館員備註：</label>
+                                    <input type="text" id="rem_${record.uuid}" placeholder="選填" style="margin:0; padding:8px;">
                                 </div>
                             </div>
                             
@@ -364,7 +369,12 @@
         }
 
         function approveRecord(uuid) {
-            const newTime = document.getElementById(`time_${uuid}`).value;
+            // 📍 核心修改 4：重新組合 日期 + 時間
+            const timeInput = document.getElementById(`timeOnly_${uuid}`);
+            const datePart = timeInput.getAttribute('data-date'); // 抓回隱藏的日期 (例如 2026-03-21)
+            const timePart = timeInput.value;                     // 抓取畫面上選定的時間 (例如 14:30)
+            const newTime = `${datePart}T${timePart}`;            // 組合回 GAS 要的格式
+            
             const multiplier = document.getElementById(`mul_${uuid}`).value;
             const remark = document.getElementById(`rem_${uuid}`).value;
             
