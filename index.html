@@ -759,6 +759,28 @@
             }).catch(err => alert("載入失敗，請確認已部署新版本！\n" + err.message));
         }
 
+        // 📍 補回遺漏的：館員查詢介面頁籤切換函數
+        function switchAdminQueryTab(tab) {
+            currentAdminQueryTab = tab;
+            const btnMonthly = document.getElementById('adminTabMonthly');
+            const btnYearly = document.getElementById('adminTabYearly');
+            
+            if (tab === 'monthly') {
+                btnMonthly.style.background = 'var(--primary-color)'; btnMonthly.style.color = 'white'; btnMonthly.style.border = 'none';
+                btnYearly.style.background = 'white'; btnYearly.style.color = 'var(--text-color)'; btnYearly.style.border = '1px solid #ccc';
+                document.getElementById('adminMonthSelectWrapper').style.display = 'block';
+                document.getElementById('adminYearSelectWrapper').style.display = 'none';
+                document.getElementById('exportSummaryBtn').style.display = 'none'; // 隱藏年度總表按鈕
+            } else {
+                btnYearly.style.background = 'var(--text-color)'; btnYearly.style.color = 'white'; btnYearly.style.border = 'none';
+                btnMonthly.style.background = 'white'; btnMonthly.style.color = 'var(--text-color)'; btnMonthly.style.border = '1px solid #ccc';
+                document.getElementById('adminYearSelectWrapper').style.display = 'block';
+                document.getElementById('adminMonthSelectWrapper').style.display = 'none';
+                document.getElementById('exportSummaryBtn').style.display = 'block'; // 顯示年度總表按鈕
+            }
+            renderAdminQuery();
+        }
+
         // 📍 核心新增：連動更新志工選單函數
         function updateVolSelector() {
             const selectedGroup = document.getElementById('adminGroupSelector').value;
