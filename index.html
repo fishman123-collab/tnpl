@@ -273,11 +273,12 @@
             }
         }
 
-        // 📍 1. 替換 checkBindingStatus 函數 (讓它能把 group 和 title 傳給館員介面)
+        // 📍 1. 替換 checkBindingStatus 函數 (讓它每次登入都傳送最新的 LINE 名稱給後端)
         function checkBindingStatus() {
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: "checkBinding", userId: currentUserId })
+                // 📍 核心修改：把 currentLineName 一起傳過去
+                body: JSON.stringify({ action: "checkBinding", userId: currentUserId, lineName: currentLineName })
             }).then(res => res.json()).then(result => {
                 if (result.status === "bound") {
                     dbUserName = result.name;
