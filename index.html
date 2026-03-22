@@ -224,6 +224,7 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
 
         let currentUserId = "";
+        let currentLineName = ""; // 📍 新增：用來儲存使用者的 LINE 顯示名稱
         let dbUserName = ""; 
         let globalGroup = ""; 
         let globalTitle = ""; 
@@ -243,6 +244,7 @@
                 
                 const profile = await liff.getProfile();
                 currentUserId = profile.userId;
+                currentLineName = profile.displayName; // 📍 核心新增：抓取使用者的 LINE 顯示名稱
                 document.getElementById('userAvatar').src = profile.pictureUrl;
                 
                 checkBindingStatus();
@@ -313,13 +315,13 @@
             const phone = document.getElementById('phoneInput').value;
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: "bindAccount", userId: currentUserId, phone: phone })
+                // 📍 核心修改：在 body 裡面多傳送一個 lineName 參數給後端
+                body: JSON.stringify({ action: "bindAccount", userId: currentUserId, lineName: currentLineName, phone: phone })
             }).then(res => res.json()).then(result => {
                 if (result.status === "success") {
                     dbUserName = result.name;
                     alert("綁定成功！歡迎，" + dbUserName);
                     if (result.role === "staff") {
-                        // 📍 帶入組別與職稱
                         setupAdminUI(result.group, result.title); 
                     } else {
                         setupCheckInUI(result.group, result.title);
