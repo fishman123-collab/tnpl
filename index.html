@@ -173,9 +173,14 @@
             </div>
             
             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">👥 選擇組別：</label>
+                <select id="adminGroupSelector" onchange="updateVolSelector(); renderAdminQuery();" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
+                    <option value="ALL">-- 所有組別 --</option>
+                </select>
+
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">👤 選擇志工：</label>
                 <select id="adminVolSelector" onchange="renderAdminQuery()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
-                    <option value="ALL">-- 所有志工 --</option>
+                    <option value="ALL">-- 所有名單 --</option>
                 </select>
 
                 <div style="display: flex; gap: 10px;">
@@ -709,7 +714,6 @@
         function openAdminQueryUI(from = 'admin') {
             switchSection(document.getElementById('sectionAdminQuery'));
             
-            // 📍 動態設定返回鍵的目的地
             const backBtn = document.getElementById('adminQueryBackBtn');
             if (from === 'volunteer') {
                 backBtn.onclick = () => switchSection(document.getElementById('sectionCheckIn'));
@@ -722,7 +726,6 @@
             const currentYear = currentMonth.slice(0, 4);
             
             document.getElementById('adminMonthSelector').value = currentMonth;
-            
             const yearSelect = document.getElementById('adminYearSelector');
             yearSelect.innerHTML = "";
             for (let y = parseInt(currentYear); y >= parseInt(currentYear) - 2; y--) {
@@ -733,63 +736,54 @@
             
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-                // 📍 核心新增：把 currentUserId 傳給後端，讓後端當作識別證來檢查權限
                 body: JSON.stringify({ action: "getAllVolunteerRecords", userId: currentUserId })
             }).then(res => res.json()).then(result => {
                 if(result.status === "success") {
                     allAdminQueryRecords = result.data;
                     globalRoster = result.roster; 
                     
-                    const nameCounts = {};
-                    globalRoster.forEach(vol => {
-                        nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1;
-                    });
-
-                    const volSelect = document.getElementById('adminVolSelector');
-                    // 館員跟大隊長看得到「全館」，小組長看得到「全組」，所以這裡文字改為「-- 所有名單 --」比較通用
-                    volSelect.innerHTML = '<option value="ALL">-- 所有名單 --</option>';
+                    // 📍 第一階：動態產生組別下拉選單
+                    const groupSelect = document.getElementById('adminGroupSelector');
+                    const uniqueGroups = [...new Set(globalRoster.map(v => v.group))];
                     
-                    globalRoster.forEach(vol => {
-                        const val = vol.lineId || `unbound_${Math.random()}`;
-                        let displayName = vol.name;
-                        
-                        if (vol.lineId) {
-                            if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") {
-                                displayName += ` (尾數${vol.phoneTail})`;
-                            }
-                        } else {
-                            displayName += ` (尚未綁定)`;
-                        }
-                        
-                        volSelect.innerHTML += `<option value="${val}">${displayName}</option>`;
+                    // 如果權限只有單一組別(小組長)，就不顯示"所有組別"，直接鎖定
+                    groupSelect.innerHTML = uniqueGroups.length > 1 ? '<option value="ALL">-- 所有組別 --</option>' : '';
+                    uniqueGroups.forEach(g => {
+                        groupSelect.innerHTML += `<option value="${g}">${g}</option>`;
                     });
 
+                    // 📍 觸發連動，產生第二階志工名單
+                    updateVolSelector();
                     renderAdminQuery();
-                } else {
-                    alert("載入失敗：" + result.message);
-                }
+                } else alert("載入失敗：" + result.message);
             }).catch(err => alert("載入失敗，請確認已部署新版本！\n" + err.message));
         }
 
-        function switchAdminQueryTab(tab) {
-            currentAdminQueryTab = tab;
-            const btnMonthly = document.getElementById('adminTabMonthly');
-            const btnYearly = document.getElementById('adminTabYearly');
+        // 📍 核心新增：連動更新志工選單函數
+        function updateVolSelector() {
+            const selectedGroup = document.getElementById('adminGroupSelector').value;
+            const volSelect = document.getElementById('adminVolSelector');
             
-            if (tab === 'monthly') {
-                btnMonthly.style.background = 'var(--primary-color)'; btnMonthly.style.color = 'white'; btnMonthly.style.border = 'none';
-                btnYearly.style.background = 'white'; btnYearly.style.color = 'var(--text-color)'; btnYearly.style.border = '1px solid #ccc';
-                document.getElementById('adminMonthSelectWrapper').style.display = 'block';
-                document.getElementById('adminYearSelectWrapper').style.display = 'none';
-                document.getElementById('exportSummaryBtn').style.display = 'none'; // 隱藏年度總表按鈕
-            } else {
-                btnYearly.style.background = 'var(--text-color)'; btnYearly.style.color = 'white'; btnYearly.style.border = 'none';
-                btnMonthly.style.background = 'white'; btnMonthly.style.color = 'var(--text-color)'; btnMonthly.style.border = '1px solid #ccc';
-                document.getElementById('adminYearSelectWrapper').style.display = 'block';
-                document.getElementById('adminMonthSelectWrapper').style.display = 'none';
-                document.getElementById('exportSummaryBtn').style.display = 'block'; // 顯示年度總表按鈕
+            // 依據組別過濾名冊
+            let filteredRoster = globalRoster;
+            if (selectedGroup !== "ALL") {
+                filteredRoster = filteredRoster.filter(v => v.group === selectedGroup);
             }
-            renderAdminQuery();
+
+            const nameCounts = {};
+            globalRoster.forEach(vol => { nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1; });
+
+            volSelect.innerHTML = '<option value="ALL">-- 所有名單 --</option>';
+            filteredRoster.forEach(vol => {
+                const val = vol.lineId || `unbound_${Math.random()}`;
+                let displayName = vol.name;
+                
+                if (vol.lineId) {
+                    if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") displayName += ` (尾數${vol.phoneTail})`;
+                } else displayName += ` (尚未綁定)`;
+                
+                volSelect.innerHTML += `<option value="${val}">${displayName}</option>`;
+            });
         }
 
         function renderAdminQuery() {
@@ -797,31 +791,34 @@
             container.innerHTML = "";
             let totalHours = 0;
 
+            const selectedGroup = document.getElementById('adminGroupSelector').value;
             const selectedVolId = document.getElementById('adminVolSelector').value;
             const selectedMonth = document.getElementById('adminMonthSelector').value;
             const selectedYear = document.getElementById('adminYearSelector').value;
 
-            // 1. 先篩選志工 (📍 核心修改：改用 userId 篩選)
             let filtered = allAdminQueryRecords;
+
+            // 📍 篩選 1：如果選了特定組別但沒選定特定志工，過濾出該組別所有人的紀錄
+            if (selectedGroup !== "ALL" && selectedVolId === "ALL") {
+                const validUserIds = globalRoster.filter(v => v.group === selectedGroup).map(v => v.lineId);
+                filtered = filtered.filter(r => validUserIds.includes(r.userId));
+            }
+
+            // 📍 篩選 2：如果選了特定志工，直接精準過濾
             if (selectedVolId !== "ALL") {
                 filtered = filtered.filter(r => r.userId === selectedVolId);
             }
 
-            // 2. 依照頁籤篩選時間
+            // 單月與年度視圖渲染...
             if (currentAdminQueryTab === 'monthly') {
                 filtered = filtered.filter(r => r.yearMonth === selectedMonth);
-                
-                if (filtered.length === 0) {
-                    container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">無符合條件的紀錄。</div>`;
-                } else {
+                if (filtered.length === 0) container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">無符合條件的紀錄。</div>`;
+                else {
                     filtered.forEach(r => {
                         totalHours += r.finalHours;
                         const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px;">⭐ x${r.multiplier}</span>` : "";
                         const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
-                        
-                        const hoursDisplay = r.multiplier > 1 
-                            ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-right:5px;">(原始 ${r.rawHours.toFixed(1)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` 
-                            : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
+                        const hoursDisplay = r.multiplier > 1 ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-right:5px;">(原始 ${r.rawHours.toFixed(1)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
 
                         container.innerHTML += `
                             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
@@ -837,7 +834,6 @@
                     });
                 }
             } else {
-                // 年度邏輯
                 filtered = filtered.filter(r => r.year === selectedYear);
                 const monthlySums = {}; 
                 filtered.forEach(r => {
@@ -846,18 +842,19 @@
                     monthlySums[r.yearMonth] += r.finalHours;
                 });
 
-                if (Object.keys(monthlySums).length === 0) {
-                    container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">該年度無紀錄。</div>`;
-                } else {
+                if (Object.keys(monthlySums).length === 0) container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">該年度無紀錄。</div>`;
+                else {
                     const sortedMonths = Object.keys(monthlySums).sort().reverse();
-                    
-                    // 找出選單目前的文字 (例如：陳小明(5678))
-                    const selElement = document.getElementById('adminVolSelector');
-                    const selectedNameText = selElement.options[selElement.selectedIndex].text;
+                    const selectedNameText = document.getElementById('adminVolSelector').options[document.getElementById('adminVolSelector').selectedIndex].text;
+                    const selectedGroupText = document.getElementById('adminGroupSelector').options[document.getElementById('adminGroupSelector').selectedIndex].text;
 
                     sortedMonths.forEach(ym => {
                         const [, month] = ym.split('-');
-                        const titleText = selectedVolId === "ALL" ? `全館 ${month} 月份總計` : `👤 ${selectedNameText} ${month} 月份總計`;
+                        let titleText = "";
+                        if (selectedVolId !== "ALL") titleText = `👤 ${selectedNameText} ${month} 月份總計`;
+                        else if (selectedGroup !== "ALL") titleText = `👥 ${selectedGroupText} ${month} 月份總計`;
+                        else titleText = `全館 ${month} 月份總計`;
+
                         container.innerHTML += `
                             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid #d97706;">
                                 <div style="font-weight:bold; font-size:15px;">📅 ${titleText}</div>
@@ -870,16 +867,22 @@
             document.getElementById('adminQueryTotalHours').innerText = totalHours.toFixed(1);
         }
 
-        // 📍 匯出 CSV 明細報表 (改用 userId 篩選)
+        // 📍 匯出明細報表 (套用組別過濾)
         function exportAdminQueryCSV() {
             if (allAdminQueryRecords.length === 0) { alert("目前沒有資料可以匯出！"); return; }
             
+            const selectedGroup = document.getElementById('adminGroupSelector').value;
             const selectedVolId = document.getElementById('adminVolSelector').value;
             const selectedMonth = document.getElementById('adminMonthSelector').value;
             const selectedYear = document.getElementById('adminYearSelector').value;
             
             let filtered = allAdminQueryRecords;
+            if (selectedGroup !== "ALL" && selectedVolId === "ALL") {
+                const validUserIds = globalRoster.filter(v => v.group === selectedGroup).map(v => v.lineId);
+                filtered = filtered.filter(r => validUserIds.includes(r.userId));
+            }
             if (selectedVolId !== "ALL") filtered = filtered.filter(r => r.userId === selectedVolId);
+            
             if (currentAdminQueryTab === 'monthly') filtered = filtered.filter(r => r.yearMonth === selectedMonth);
             else filtered = filtered.filter(r => r.year === selectedYear);
 
@@ -897,29 +900,34 @@
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
+            
+            // 檔名智慧判斷：如果選特定志工就顯示名字，如果選組別就顯示組別
+            let prefix = selectedVolId !== "ALL" ? document.getElementById('adminVolSelector').options[document.getElementById('adminVolSelector').selectedIndex].text.split(" ")[0] : (selectedGroup !== "ALL" ? selectedGroup : "全館");
+            const fileName = currentAdminQueryTab === 'monthly' ? `${prefix}_${selectedMonth}_差勤明細.csv` : `${prefix}_${selectedYear}_年度差勤明細.csv`;
+            
             link.setAttribute("href", url);
-            const fileName = currentAdminQueryTab === 'monthly' ? `${selectedMonth}_差勤明細.csv` : `${selectedYear}_年度差勤明細.csv`;
             link.setAttribute("download", fileName);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
-        // 📍 匯出年度總結算表 (矩陣表)
+        // 📍 匯出年度總結算表 (加入組別過濾，且報表第一欄新增"組別")
         function exportYearlySummaryCSV() {
             if (globalRoster.length === 0) { alert("無法取得志工名冊資料！"); return; }
             
+            const selectedGroup = document.getElementById('adminGroupSelector').value;
             const selectedYear = document.getElementById('adminYearSelector').value;
             let csvContent = "\uFEFF"; 
-            csvContent += "志工姓名,1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月,年度總計\n";
+            csvContent += "組別,志工姓名,1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月,年度總計\n";
 
-            // 📍 智慧顯示邏輯 1：同樣先計算名字出現次數
             const nameCounts = {};
-            globalRoster.forEach(vol => {
-                nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1;
-            });
+            globalRoster.forEach(vol => { nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1; });
 
-            globalRoster.forEach(vol => {
+            let targetRoster = globalRoster;
+            if (selectedGroup !== "ALL") targetRoster = targetRoster.filter(v => v.group === selectedGroup);
+
+            targetRoster.forEach(vol => {
                 let monthlyHours = Array(12).fill(0);
                 let yearlyTotal = 0;
 
@@ -932,21 +940,20 @@
                     });
                 }
 
-                // 📍 智慧顯示邏輯 2：報表上的姓名顯示判斷
                 let displayName = vol.name;
-                if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") {
-                    displayName += `(尾數${vol.phoneTail})`;
-                }
+                if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") displayName += `(尾數${vol.phoneTail})`;
 
-                const row = [displayName, ...monthlyHours.map(h => h.toFixed(1)), yearlyTotal.toFixed(1)];
+                const row = [vol.group, displayName, ...monthlyHours.map(h => h.toFixed(1)), yearlyTotal.toFixed(1)];
                 csvContent += row.join(",") + "\n";
             });
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
+            
+            let prefix = selectedGroup !== "ALL" ? selectedGroup : "全館";
             link.setAttribute("href", url);
-            link.setAttribute("download", `${selectedYear}_年度時數總表.csv`);
+            link.setAttribute("download", `${prefix}_${selectedYear}_年度時數總表.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
