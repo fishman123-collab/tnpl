@@ -976,7 +976,62 @@
             document.body.removeChild(link);
         }
 
-       function exportYearlySummaryCSV
+       // 📍 更新：匯出年度總結算表 (套用關鍵字過濾)
+        function exportYearlySummaryCSV() {
+            if (globalRoster.length === 0) { alert("無法取得志工名冊資料！"); return; }
+            
+            const selectedGroup = document.getElementById('adminGroupSelector').value;
+            const keyword = document.getElementById('adminSearchInput').value.trim().toLowerCase();
+            const selectedYear = document.getElementById('adminYearSelector').value;
+            
+            let csvContent = "\uFEFF"; 
+            csvContent += "組別,志工姓名,1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月,年度總計\n";
+
+            const nameCounts = {};
+            globalRoster.forEach(vol => { nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1; });
+
+            let targetRoster = globalRoster;
+            if (selectedGroup !== "ALL") targetRoster = targetRoster.filter(v => v.group === selectedGroup);
+            if (keyword !== "") {
+                targetRoster = targetRoster.filter(v => {
+                    const searchStr = `${v.name} ${v.group} ${v.title} ${v.phone} ${v.email} ${v.lineName}`.toLowerCase();
+                    return searchStr.includes(keyword);
+                });
+            }
+
+            targetRoster.forEach(vol => {
+                let monthlyHours = Array(12).fill(0);
+                let yearlyTotal = 0;
+
+                if (vol.lineId) {
+                    const volRecords = allAdminQueryRecords.filter(r => r.userId === vol.lineId && r.year === selectedYear);
+                    volRecords.forEach(r => {
+                        const monthIndex = parseInt(r.yearMonth.split('-')[1], 10) - 1; 
+                        monthlyHours[monthIndex] += r.finalHours;
+                        yearlyTotal += r.finalHours;
+                    });
+                }
+
+                let displayName = vol.name;
+                if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") displayName += `(尾數${vol.phoneTail})`;
+
+                const row = [vol.group, displayName, ...monthlyHours.map(h => h.toFixed(1)), yearlyTotal.toFixed(1)];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            
+            let prefix = selectedGroup !== "ALL" ? selectedGroup : "全館";
+            if (keyword !== "") prefix += "_搜尋結果";
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${prefix}_${selectedYear}_年度時數總表.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
         
     </script>
 </body>
