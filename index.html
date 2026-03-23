@@ -156,10 +156,12 @@
             <div class="admin-header">
                 <h2>📋 待審核清單</h2>
                 <div>
+                    <button class="refresh-btn" onclick="openManualEntryUI()" style="background:#fff3e0; color:#e65100; font-weight:bold; margin-right:5px;">➕ 補登</button>
                     <button class="refresh-btn" onclick="openAdminQueryUI()" style="background:#e0f2f1; color:#00897b; font-weight:bold; margin-right:5px;">📊 總查詢</button>
                     <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重整</button>
                 </div>
             </div>
+            
 
             <div id="adminRecordsContainer">
                 <p style="text-align:center; color:gray;">載入資料中...</p>
@@ -216,7 +218,56 @@
 
             <div id="adminQueryListContainer"></div>
         </div>
+<div id="sectionManualEntry" class="section">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <button onclick="switchSection(document.getElementById('sectionAdmin'))" style="background:none; border:none; font-size:16px; color:var(--primary-color); font-weight:bold; cursor:pointer;">⬅️ 返回審核</button>
+                <h2 style="margin:0; font-size: 18px;">✍️ 志工差勤補登</h2>
+            </div>
 
+            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">👤 選擇志工：</label>
+                <input type="text" id="manualSearchInput" oninput="filterManualVolunteers()" placeholder="可輸入姓名或組別快速過濾..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:10px; box-sizing:border-box;">
+                <select id="manualVolSelector" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
+                    <option value="">-- 資料載入中 --</option>
+                </select>
+
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">📅 補登日期：</label>
+                <input type="date" id="manualDate" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; box-sizing:border-box;">
+
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">🕒 補登時間 (24小時制)：</label>
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:15px;">
+                    <select id="manualHour" style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; font-weight:bold;"></select>
+                    <span style="font-weight:bold;">:</span>
+                    <select id="manualMin" style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; font-weight:bold;"></select>
+                </div>
+
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">📋 服務內容：</label>
+                <select id="manualService" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px;">
+                    <option value="活動">活動</option>
+                    <option value="特色空間">特色空間</option>
+                    <option value="導覽">導覽</option>
+                </select>
+
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">⏱️ 打卡狀態：</label>
+                <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+                    <label><input type="radio" name="manualCheckType" value="簽到" checked> 簽到</label>
+                    <label><input type="radio" name="manualCheckType" value="簽退"> 簽退</label>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <div style="flex:1;">
+                        <label style="font-weight:bold; display:block; margin-bottom:8px;">⭐ 加權：</label>
+                        <input type="number" id="manualMultiplier" value="1" step="0.5" min="1" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing:border-box;">
+                    </div>
+                    <div style="flex:2;">
+                        <label style="font-weight:bold; display:block; margin-bottom:8px;">📝 備註 (選填)：</label>
+                        <input type="text" id="manualRemark" placeholder="例：忘帶手機" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <button onclick="submitManualEntry()" style="width: 100%; background: #00B900; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">✅ 確認補登</button>
+            </div>
+        </div>
     </div>
 
     <div class="result-overlay" id="resultOverlay">
@@ -1030,6 +1081,112 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // ==========================================
+        // 📍 館員補登專用邏輯
+        // ==========================================
+        let manualRoster = [];
+
+        function openManualEntryUI() {
+            switchSection(document.getElementById('sectionManualEntry'));
+
+            // 預設日期為今天
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('manualDate').value = `${yyyy}-${mm}-${dd}`;
+
+            // 生成 24 小時制的時分選單
+            const getOptions = (max) => {
+                let opts = '';
+                for(let i=0; i<=max; i++) {
+                    let val = i.toString().padStart(2, '0');
+                    opts += `<option value="${val}">${val}</option>`;
+                }
+                return opts;
+            };
+            document.getElementById('manualHour').innerHTML = getOptions(23);
+            document.getElementById('manualMin').innerHTML = getOptions(59);
+
+            // 呼叫後端抓取館員專用的志工名單
+            document.getElementById('manualVolSelector').innerHTML = '<option value="">名單載入中 ⏳...</option>';
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "getRoster", userId: currentUserId })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") {
+                    manualRoster = result.roster;
+                    filterManualVolunteers(); // 套用搜尋過濾與智慧顯示
+                } else alert("權限不足或載入失敗：" + result.message);
+            }).catch(err => alert("載入失敗：" + err.message));
+        }
+
+        // 📍 補登專用的志工搜尋過濾器
+        function filterManualVolunteers() {
+            const keyword = document.getElementById('manualSearchInput').value.trim().toLowerCase();
+            const volSelect = document.getElementById('manualVolSelector');
+
+            let filtered = manualRoster;
+            if (keyword !== "") {
+                filtered = filtered.filter(v => v.name.toLowerCase().includes(keyword) || v.group.toLowerCase().includes(keyword));
+            }
+
+            const nameCounts = {};
+            manualRoster.forEach(vol => { nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1; });
+
+            volSelect.innerHTML = '<option value="">-- 請選擇要補登的志工 --</option>';
+            filtered.forEach(vol => {
+                let displayName = vol.name;
+                if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") displayName += ` (尾數${vol.phoneTail})`;
+                displayName += ` - ${vol.group}`; // 加上組別方便館員辨識
+                
+                // 將名字藏在屬性中，提交時可以一起送給後端
+                volSelect.innerHTML += `<option value="${vol.lineId}" data-name="${vol.name}">${displayName}</option>`;
+            });
+        }
+
+        // 📍 送出補登資料
+        function submitManualEntry() {
+            const volSelect = document.getElementById('manualVolSelector');
+            const targetUserId = volSelect.value;
+            if (!targetUserId) { alert("⚠️ 請先選擇要補登的志工！"); return; }
+            
+            const volunteerName = volSelect.options[volSelect.selectedIndex].getAttribute('data-name');
+            const dateStr = document.getElementById('manualDate').value;
+            const hour = document.getElementById('manualHour').value;
+            const min = document.getElementById('manualMin').value;
+            if (!dateStr) { alert("⚠️ 請選擇補登日期！"); return; }
+            
+            const dateTimeStr = `${dateStr}T${hour}:${min}`;
+            const serviceType = document.getElementById('manualService').value;
+            const checkType = document.querySelector('input[name="manualCheckType"]:checked').value;
+            const multiplier = document.getElementById('manualMultiplier').value;
+            const remark = document.getElementById('manualRemark').value;
+
+            const btn = event.target;
+            btn.disabled = true; btn.innerText = "資料驗證中 ⏳...";
+
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ 
+                    action: "manualEntry", userId: currentUserId, targetUserId: targetUserId, volunteerName: volunteerName,
+                    dateTimeStr: dateTimeStr, checkType: checkType, serviceType: serviceType, multiplier: multiplier, remark: remark
+                })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") {
+                    alert("✅ " + result.message);
+                    switchSection(document.getElementById('sectionAdmin'));
+                    fetchPendingRecords(); // 成功後自動回到館員首頁並重整資料
+                } else {
+                    alert("❌ 補登失敗\n" + result.message); // 防呆邏輯發動，跳出警告
+                }
+                btn.disabled = false; btn.innerText = "✅ 確認補登";
+            }).catch(err => {
+                alert("網路異常，補登失敗：" + err.message);
+                btn.disabled = false; btn.innerText = "✅ 確認補登";
+            });
         }
         
     </script>
