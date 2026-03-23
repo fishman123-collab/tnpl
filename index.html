@@ -250,8 +250,8 @@
 
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">⏱️ 打卡狀態：</label>
                 <div style="display: flex; gap: 20px; margin-bottom: 15px;">
-                    <label><input type="radio" name="manualCheckType" value="簽到" checked> 簽到</label>
-                    <label><input type="radio" name="manualCheckType" value="簽退"> 簽退</label>
+                    <label><input type="radio" name="manualCheckType" value="簽到" checked onchange="toggleManualInputs()"> 簽到</label>
+                    <label><input type="radio" name="manualCheckType" value="簽退" onchange="toggleManualInputs()"> 簽退</label>
                 </div>
 
                 <div style="display:flex; gap:10px; margin-bottom:15px;">
@@ -1109,6 +1109,10 @@
             };
             document.getElementById('manualHour').innerHTML = getOptions(23);
             document.getElementById('manualMin').innerHTML = getOptions(59);
+            
+            // 📍 每次打開時，預設重置為「簽到」並恢復輸入框狀態
+            document.querySelector('input[name="manualCheckType"][value="簽到"]').checked = true;
+            toggleManualInputs();
 
             // 呼叫後端抓取館員專用的志工名單
             document.getElementById('manualVolSelector').innerHTML = '<option value="">名單載入中 ⏳...</option>';
@@ -1118,9 +1122,29 @@
             }).then(res => res.json()).then(result => {
                 if(result.status === "success") {
                     manualRoster = result.roster;
-                    filterManualVolunteers(); // 套用搜尋過濾與智慧顯示
+                    filterManualVolunteers(); 
                 } else alert("權限不足或載入失敗：" + result.message);
             }).catch(err => alert("載入失敗：" + err.message));
+        }
+
+        // 📍 新增：補登介面的防呆切換器 (選擇簽退時，鎖定服務內容與加權)
+        function toggleManualInputs() {
+            const checkType = document.querySelector('input[name="manualCheckType"]:checked').value;
+            const serviceSelect = document.getElementById('manualService');
+            const multiplierInput = document.getElementById('manualMultiplier');
+
+            if (checkType === "簽退") {
+                serviceSelect.disabled = true;
+                serviceSelect.style.backgroundColor = "#f5f5f5";
+                multiplierInput.disabled = true;
+                multiplierInput.value = 1;
+                multiplierInput.style.backgroundColor = "#f5f5f5";
+            } else {
+                serviceSelect.disabled = false;
+                serviceSelect.style.backgroundColor = "white";
+                multiplierInput.disabled = false;
+                multiplierInput.style.backgroundColor = "white";
+            }
         }
 
         // 📍 補登專用的志工搜尋過濾器
