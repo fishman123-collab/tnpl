@@ -178,9 +178,14 @@
                     <option value="ALL">-- 所有組別 --</option>
                 </select>
 
-                <label style="font-weight:bold; display:block; margin-bottom:8px;">👤 選擇志工：</label>
-                <select id="adminVolSelector" onchange="renderAdminQuery()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
-                    <option value="ALL">-- 所有名單 --</option>
+                <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
+                
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">🔍 關鍵字搜尋：</label>
+                <input type="text" id="adminSearchInput" oninput="updateVolSelector(); renderAdminQuery();" placeholder="可輸入姓名,職稱,電話,Email,LINE名" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; box-sizing:border-box;">
+
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">👥 選擇組別：</label>
+                <select id="adminGroupSelector" onchange="updateVolSelector(); renderAdminQuery();" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
+                    <option value="ALL">-- 所有組別 --</option>
                 </select>
 
                 <div style="display: flex; gap: 10px;">
@@ -781,15 +786,26 @@
             renderAdminQuery();
         }
 
-        // 📍 核心新增：連動更新志工選單函數
+        // 📍 核心更新：加入關鍵字搜尋的志工選單連動
         function updateVolSelector() {
             const selectedGroup = document.getElementById('adminGroupSelector').value;
+            const keyword = document.getElementById('adminSearchInput').value.trim().toLowerCase();
             const volSelect = document.getElementById('adminVolSelector');
             
-            // 依據組別過濾名冊
             let filteredRoster = globalRoster;
+            
+            // 1. 依據組別過濾
             if (selectedGroup !== "ALL") {
                 filteredRoster = filteredRoster.filter(v => v.group === selectedGroup);
+            }
+            
+            // 2. 📍 依據關鍵字搜尋多個欄位 (C,D,E,F,G,H 欄)
+            if (keyword !== "") {
+                filteredRoster = filteredRoster.filter(v => {
+                    // 將所有可搜尋的資訊組合成一個大字串來做比對
+                    const searchStr = `${v.name} ${v.group} ${v.title} ${v.phone} ${v.email} ${v.lineName}`.toLowerCase();
+                    return searchStr.includes(keyword);
+                });
             }
 
             const nameCounts = {};
@@ -815,14 +831,25 @@
 
             const selectedGroup = document.getElementById('adminGroupSelector').value;
             const selectedVolId = document.getElementById('adminVolSelector').value;
+            const keyword = document.getElementById('adminSearchInput').value.trim().toLowerCase();
             const selectedMonth = document.getElementById('adminMonthSelector').value;
             const selectedYear = document.getElementById('adminYearSelector').value;
 
             let filtered = allAdminQueryRecords;
 
-            // 📍 篩選 1：如果選了特定組別但沒選定特定志工，過濾出該組別所有人的紀錄
-            if (selectedGroup !== "ALL" && selectedVolId === "ALL") {
-                const validUserIds = globalRoster.filter(v => v.group === selectedGroup).map(v => v.lineId);
+            // 📍 產出符合「組別」與「關鍵字」的合法使用者名單
+            let validRoster = globalRoster;
+            if (selectedGroup !== "ALL") validRoster = validRoster.filter(v => v.group === selectedGroup);
+            if (keyword !== "") {
+                validRoster = validRoster.filter(v => {
+                    const searchStr = `${v.name} ${v.group} ${v.title} ${v.phone} ${v.email} ${v.lineName}`.toLowerCase();
+                    return searchStr.includes(keyword);
+                });
+            }
+            const validUserIds = validRoster.map(v => v.lineId);
+
+            // 📍 篩選 1：如果沒選特定志工，過濾出符合(組別+關鍵字)的所有人紀錄
+            if (selectedVolId === "ALL" && (selectedGroup !== "ALL" || keyword !== "")) {
                 filtered = filtered.filter(r => validUserIds.includes(r.userId));
             }
 
@@ -831,7 +858,6 @@
                 filtered = filtered.filter(r => r.userId === selectedVolId);
             }
 
-            // 單月與年度視圖渲染...
             if (currentAdminQueryTab === 'monthly') {
                 filtered = filtered.filter(r => r.yearMonth === selectedMonth);
                 if (filtered.length === 0) container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">無符合條件的紀錄。</div>`;
@@ -874,8 +900,12 @@
                         const [, month] = ym.split('-');
                         let titleText = "";
                         if (selectedVolId !== "ALL") titleText = `👤 ${selectedNameText} ${month} 月份總計`;
-                        else if (selectedGroup !== "ALL") titleText = `👥 ${selectedGroupText} ${month} 月份總計`;
-                        else titleText = `全館 ${month} 月份總計`;
+                        else {
+                            if (selectedGroup !== "ALL") titleText = `👥 ${selectedGroupText} ${month} 月份總計`;
+                            else titleText = `全館 ${month} 月份總計`;
+                            
+                            if (keyword !== "") titleText += ` (含關鍵字搜尋)`;
+                        }
 
                         container.innerHTML += `
                             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid #d97706;">
@@ -889,18 +919,29 @@
             document.getElementById('adminQueryTotalHours').innerText = totalHours.toFixed(1);
         }
 
-        // 📍 匯出明細報表 (套用組別過濾)
+        // 📍 更新：匯出明細報表 (套用關鍵字與組別過濾)
         function exportAdminQueryCSV() {
             if (allAdminQueryRecords.length === 0) { alert("目前沒有資料可以匯出！"); return; }
             
             const selectedGroup = document.getElementById('adminGroupSelector').value;
             const selectedVolId = document.getElementById('adminVolSelector').value;
+            const keyword = document.getElementById('adminSearchInput').value.trim().toLowerCase();
             const selectedMonth = document.getElementById('adminMonthSelector').value;
             const selectedYear = document.getElementById('adminYearSelector').value;
             
             let filtered = allAdminQueryRecords;
-            if (selectedGroup !== "ALL" && selectedVolId === "ALL") {
-                const validUserIds = globalRoster.filter(v => v.group === selectedGroup).map(v => v.lineId);
+            
+            let validRoster = globalRoster;
+            if (selectedGroup !== "ALL") validRoster = validRoster.filter(v => v.group === selectedGroup);
+            if (keyword !== "") {
+                validRoster = validRoster.filter(v => {
+                    const searchStr = `${v.name} ${v.group} ${v.title} ${v.phone} ${v.email} ${v.lineName}`.toLowerCase();
+                    return searchStr.includes(keyword);
+                });
+            }
+            const validUserIds = validRoster.map(v => v.lineId);
+
+            if (selectedVolId === "ALL" && (selectedGroup !== "ALL" || keyword !== "")) {
                 filtered = filtered.filter(r => validUserIds.includes(r.userId));
             }
             if (selectedVolId !== "ALL") filtered = filtered.filter(r => r.userId === selectedVolId);
@@ -923,8 +964,9 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             
-            // 檔名智慧判斷：如果選特定志工就顯示名字，如果選組別就顯示組別
             let prefix = selectedVolId !== "ALL" ? document.getElementById('adminVolSelector').options[document.getElementById('adminVolSelector').selectedIndex].text.split(" ")[0] : (selectedGroup !== "ALL" ? selectedGroup : "全館");
+            if (keyword !== "" && selectedVolId === "ALL") prefix += "_搜尋結果";
+            
             const fileName = currentAdminQueryTab === 'monthly' ? `${prefix}_${selectedMonth}_差勤明細.csv` : `${prefix}_${selectedYear}_年度差勤明細.csv`;
             
             link.setAttribute("href", url);
@@ -934,52 +976,7 @@
             document.body.removeChild(link);
         }
 
-        // 📍 匯出年度總結算表 (加入組別過濾，且報表第一欄新增"組別")
-        function exportYearlySummaryCSV() {
-            if (globalRoster.length === 0) { alert("無法取得志工名冊資料！"); return; }
-            
-            const selectedGroup = document.getElementById('adminGroupSelector').value;
-            const selectedYear = document.getElementById('adminYearSelector').value;
-            let csvContent = "\uFEFF"; 
-            csvContent += "組別,志工姓名,1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月,年度總計\n";
-
-            const nameCounts = {};
-            globalRoster.forEach(vol => { nameCounts[vol.name] = (nameCounts[vol.name] || 0) + 1; });
-
-            let targetRoster = globalRoster;
-            if (selectedGroup !== "ALL") targetRoster = targetRoster.filter(v => v.group === selectedGroup);
-
-            targetRoster.forEach(vol => {
-                let monthlyHours = Array(12).fill(0);
-                let yearlyTotal = 0;
-
-                if (vol.lineId) {
-                    const volRecords = allAdminQueryRecords.filter(r => r.userId === vol.lineId && r.year === selectedYear);
-                    volRecords.forEach(r => {
-                        const monthIndex = parseInt(r.yearMonth.split('-')[1], 10) - 1; 
-                        monthlyHours[monthIndex] += r.finalHours;
-                        yearlyTotal += r.finalHours;
-                    });
-                }
-
-                let displayName = vol.name;
-                if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") displayName += `(尾數${vol.phoneTail})`;
-
-                const row = [vol.group, displayName, ...monthlyHours.map(h => h.toFixed(1)), yearlyTotal.toFixed(1)];
-                csvContent += row.join(",") + "\n";
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            
-            let prefix = selectedGroup !== "ALL" ? selectedGroup : "全館";
-            link.setAttribute("href", url);
-            link.setAttribute("download", `${prefix}_${selectedYear}_年度時數總表.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+       function exportYearlySummaryCSV
         
     </script>
 </body>
