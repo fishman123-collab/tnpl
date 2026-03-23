@@ -355,7 +355,7 @@
                 }
             });
         }
-        // 📍 系統管理員：一鍵切換視角功能
+       // 📍 系統管理員：一鍵切換視角功能
         let isViewAsVolunteer = false;
         function toggleViewMode() {
             isViewAsVolunteer = !isViewAsVolunteer;
@@ -363,10 +363,12 @@
             if (isViewAsVolunteer) {
                 btn.innerText = "🔄 切換回館員視角";
                 btn.style.background = "var(--primary-color)";
-                setupCheckInUI(globalGroup, globalTitle);
+                // 📍 核心修改：切換為志工時，強制賦予「大隊長」身分以供完整測試
+                setupCheckInUI(globalGroup || "測試組別", "大隊長");
             } else {
                 btn.innerText = "🔄 切換為志工視角";
                 btn.style.background = "#333";
+                // 切換回館員時，恢復原本真實的群組與職稱
                 setupAdminUI(globalGroup, globalTitle);
             }
         }
