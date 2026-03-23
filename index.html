@@ -173,12 +173,6 @@
             </div>
             
             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
-                <label style="font-weight:bold; display:block; margin-bottom:8px;">👥 選擇組別：</label>
-                <select id="adminGroupSelector" onchange="updateVolSelector(); renderAdminQuery();" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
-                    <option value="ALL">-- 所有組別 --</option>
-                </select>
-
-                <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
                 
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">🔍 關鍵字搜尋：</label>
                 <input type="text" id="adminSearchInput" oninput="updateVolSelector(); renderAdminQuery();" placeholder="可輸入姓名,職稱,電話,Email,LINE名" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; box-sizing:border-box;">
@@ -186,6 +180,11 @@
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">👥 選擇組別：</label>
                 <select id="adminGroupSelector" onchange="updateVolSelector(); renderAdminQuery();" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
                     <option value="ALL">-- 所有組別 --</option>
+                </select>
+
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">👤 選擇志工：</label>
+                <select id="adminVolSelector" onchange="renderAdminQuery()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; font-weight:bold; color:var(--primary-color);">
+                    <option value="ALL">-- 所有名單 --</option>
                 </select>
 
                 <div style="display: flex; gap: 10px;">
