@@ -936,31 +936,31 @@
                 filtered = filtered.filter(r => r.year === selectedYear);
                 const monthlySums = {}; 
                 filtered.forEach(r => {
-                    totalHours += r.finalHours;
-                    if (!monthlySums[r.yearMonth]) monthlySums[r.yearMonth] = 0;
-                    monthlySums[r.yearMonth] += r.finalHours;
-                });
+                        totalHours += r.finalHours;
+                        const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px;">⭐ x${r.multiplier}</span>` : "";
+                        const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
+                        const hoursDisplay = r.multiplier > 1 ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-bottom:3px; display:block;">(原始 ${r.rawHours.toFixed(1)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
 
-                if (Object.keys(monthlySums).length === 0) container.innerHTML = `<div style="text-align:center; color:gray; padding: 20px;">該年度無紀錄。</div>`;
-                else {
-                    const sortedMonths = Object.keys(monthlySums).sort().reverse();
-                    const selectedNameText = document.getElementById('adminVolSelector').options[document.getElementById('adminVolSelector').selectedIndex].text;
-                    const selectedGroupText = document.getElementById('adminGroupSelector').options[document.getElementById('adminGroupSelector').selectedIndex].text;
-
-                    sortedMonths.forEach(ym => {
-                        const [, month] = ym.split('-');
-                        let titleText = "";
-                        if (selectedVolId !== "ALL") titleText = `👤 ${selectedNameText} ${month} 月份總計`;
-                        else {
-                            if (selectedGroup !== "ALL") titleText = `👥 ${selectedGroupText} ${month} 月份總計`;
-                            else titleText = `全館 ${month} 月份總計`;
-                            if (keyword !== "") titleText += ` (含關鍵字搜尋)`;
-                        }
+                        const volInfo = globalRoster.find(v => v.lineId === r.userId);
+                        // 📍 優化排版：將 LINE 名稱與日期拆解並重新組合
+                        const lineNameDisplay = (volInfo && volInfo.lineName) ? `📱 LINE: ${volInfo.lineName} &nbsp;&nbsp;|&nbsp;&nbsp; ` : "";
 
                         container.innerHTML += `
-                            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid #d97706;">
-                                <div style="font-weight:bold; font-size:15px;">📅 ${titleText}</div>
-                                <div style="font-weight:bold; color:#d97706; font-size:18px;">${monthlySums[ym].toFixed(1)} <span style="font-size:13px;">hr</span></div>
+                            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
+                                
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; border-bottom: 1px dashed #eee; padding-bottom: 8px;">
+                                    <div>
+                                        <div style="font-weight:bold; font-size:16px; margin-bottom:5px;">👤 ${r.volunteerName}</div>
+                                        <div style="font-size:12px; color:#666;">${lineNameDisplay}📅 ${r.date}</div>
+                                    </div>
+                                    <div style="font-weight:bold; color:var(--primary-color); font-size:16px; text-align:right; line-height: 1.2;">
+                                        ${hoursDisplay}
+                                    </div>
+                                </div>
+                                
+                                <div style="font-size:13px; color:#555; margin-bottom:5px;">⏱️ ${r.startTime} ~ ${r.endTime} &nbsp; 📍 ${r.serviceType} ${multiplierText}</div>
+                                <div style="font-size:12px; color:#00897b; font-weight:bold; background:#e0f2f1; display:inline-block; padding:3px 8px; border-radius:10px;">✅ 確認館員：${r.staffName}</div>
+                                ${remarkHtml}
                             </div>
                         `;
                     });
