@@ -168,13 +168,7 @@
             </div>
         </div>
 
-        <div id="sectionAdminQuery" class="section">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <button id="adminQueryBackBtn" style="background:none; border:none; font-size:16px; color:var(--primary-color); font-weight:bold; cursor:pointer;">⬅️ 返回</button>
-                <h2 style="margin:0; font-size: 18px;">差勤查詢系統</h2>
-            </div>
-            
-            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
+       <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 15px;">
                 
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">🔍 關鍵字搜尋：</label>
                 <input type="text" id="adminSearchInput" oninput="updateVolSelector(); renderAdminQuery();" placeholder="可輸入姓名,職稱,電話,Email,LINE名" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px; box-sizing:border-box;">
@@ -333,11 +327,10 @@
             }
         }
 
-        // 📍 1. 替換 checkBindingStatus 函數 (讓它每次登入都傳送最新的 LINE 名稱給後端)
+        // 📍 1. 替換 checkBindingStatus 函數 (加入錯誤捕捉機制，防止畫面卡死)
         function checkBindingStatus() {
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-                // 📍 核心修改：把 currentLineName 一起傳過去
                 body: JSON.stringify({ action: "checkBinding", userId: currentUserId, lineName: currentLineName })
             }).then(res => res.json()).then(result => {
                 if (result.status === "bound") {
@@ -353,6 +346,10 @@
                     switchSection(document.getElementById('sectionBind'));
                     document.getElementById('systemSubtitle').innerText = "首次使用驗證";
                 }
+            }).catch(err => {
+                // 📍 加上錯誤捕捉，如果連線失敗會跳出警告，不再卡死畫面
+                alert("⚠️ 系統連線異常！\n\n可能原因：\n1. 網路連線不穩\n2. GAS 後端未正確發佈 (請確認存取權限為「所有人」)\n3. GAS 網址已變更\n\n錯誤細節：" + err.message);
+                document.getElementById('sectionLoading').innerHTML = `<p style="color:red; font-weight:bold;">連線失敗，請檢查設定後重新整理。</p>`;
             });
         }
        // 📍 系統管理員：一鍵切換視角功能
