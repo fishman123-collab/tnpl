@@ -838,7 +838,7 @@
             renderAdminQuery();
         }
 
-        // 📍 核心更新：加入關鍵字搜尋的志工選單連動
+        // 📍 核心更新：加入關鍵字搜尋的志工選單連動 (加入 LINE 名稱顯示)
         function updateVolSelector() {
             const selectedGroup = document.getElementById('adminGroupSelector').value;
             const keyword = document.getElementById('adminSearchInput').value.trim().toLowerCase();
@@ -846,15 +846,12 @@
             
             let filteredRoster = globalRoster;
             
-            // 1. 依據組別過濾
             if (selectedGroup !== "ALL") {
                 filteredRoster = filteredRoster.filter(v => v.group === selectedGroup);
             }
             
-            // 2. 📍 依據關鍵字搜尋多個欄位 (C,D,E,F,G,H 欄)
             if (keyword !== "") {
                 filteredRoster = filteredRoster.filter(v => {
-                    // 將所有可搜尋的資訊組合成一個大字串來做比對
                     const searchStr = `${v.name} ${v.group} ${v.title} ${v.phone} ${v.email} ${v.lineName}`.toLowerCase();
                     return searchStr.includes(keyword);
                 });
@@ -869,6 +866,8 @@
                 let displayName = vol.name;
                 
                 if (vol.lineId) {
+                    // 📍 核心修改：如果有 LINE 名稱，就顯示在名字旁邊
+                    if (vol.lineName) displayName += ` [LINE: ${vol.lineName}]`;
                     if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") displayName += ` (尾數${vol.phoneTail})`;
                 } else displayName += ` (尚未綁定)`;
                 
@@ -888,9 +887,8 @@
             const selectedYear = document.getElementById('adminYearSelector').value;
 
             let filtered = allAdminQueryRecords;
-
-            // 📍 產出符合「組別」與「關鍵字」的合法使用者名單
             let validRoster = globalRoster;
+            
             if (selectedGroup !== "ALL") validRoster = validRoster.filter(v => v.group === selectedGroup);
             if (keyword !== "") {
                 validRoster = validRoster.filter(v => {
@@ -900,12 +898,9 @@
             }
             const validUserIds = validRoster.map(v => v.lineId);
 
-            // 📍 篩選 1：如果沒選特定志工，過濾出符合(組別+關鍵字)的所有人紀錄
             if (selectedVolId === "ALL" && (selectedGroup !== "ALL" || keyword !== "")) {
                 filtered = filtered.filter(r => validUserIds.includes(r.userId));
             }
-
-            // 📍 篩選 2：如果選了特定志工，直接精準過濾
             if (selectedVolId !== "ALL") {
                 filtered = filtered.filter(r => r.userId === selectedVolId);
             }
@@ -920,10 +915,14 @@
                         const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
                         const hoursDisplay = r.multiplier > 1 ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-right:5px;">(原始 ${r.rawHours.toFixed(1)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
 
+                        // 📍 核心修改：從名冊中找出這筆紀錄的 LINE 名稱，並顯示在卡片上
+                        const volInfo = globalRoster.find(v => v.lineId === r.userId);
+                        const lineNameDisplay = (volInfo && volInfo.lineName) ? ` <span style="font-size:13px; font-weight:normal; color:#888;">(LINE: ${volInfo.lineName})</span>` : "";
+
                         container.innerHTML += `
                             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                    <div style="font-weight:bold; font-size:16px;">👤 ${r.volunteerName} <span style="font-size:13px; font-weight:normal; color:#666;">| ${r.date}</span></div>
+                                    <div style="font-weight:bold; font-size:16px;">👤 ${r.volunteerName}${lineNameDisplay} <span style="font-size:13px; font-weight:normal; color:#666;">| ${r.date}</span></div>
                                     <div style="font-weight:bold; color:var(--primary-color); font-size:16px;">${hoursDisplay}</div>
                                 </div>
                                 <div style="font-size:13px; color:#555; margin-bottom:5px;">⏱️ ${r.startTime} ~ ${r.endTime} &nbsp; 📍 ${r.serviceType} ${multiplierText}</div>
@@ -955,7 +954,6 @@
                         else {
                             if (selectedGroup !== "ALL") titleText = `👥 ${selectedGroupText} ${month} 月份總計`;
                             else titleText = `全館 ${month} 月份總計`;
-                            
                             if (keyword !== "") titleText += ` (含關鍵字搜尋)`;
                         }
 
@@ -1149,7 +1147,7 @@
             }
         }
 
-        // 📍 補登專用的志工搜尋過濾器
+        // 📍 補登專用的志工搜尋過濾器 (加入 LINE 名稱顯示)
         function filterManualVolunteers() {
             const keyword = document.getElementById('manualSearchInput').value.trim().toLowerCase();
             const volSelect = document.getElementById('manualVolSelector');
@@ -1165,10 +1163,13 @@
             volSelect.innerHTML = '<option value="">-- 請選擇要補登的志工 --</option>';
             filtered.forEach(vol => {
                 let displayName = vol.name;
-                if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") displayName += ` (尾數${vol.phoneTail})`;
-                displayName += ` - ${vol.group}`; // 加上組別方便館員辨識
                 
-                // 將名字藏在屬性中，提交時可以一起送給後端
+                // 📍 核心修改：如果有 LINE 名稱，顯示在選單上
+                if (vol.lineName) displayName += ` [LINE: ${vol.lineName}]`;
+                if (nameCounts[vol.name] > 1 && vol.phoneTail !== "無") displayName += ` (尾數${vol.phoneTail})`;
+                
+                displayName += ` - ${vol.group}`; 
+                
                 volSelect.innerHTML += `<option value="${vol.lineId}" data-name="${vol.name}">${displayName}</option>`;
             });
         }
