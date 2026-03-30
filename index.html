@@ -151,14 +151,21 @@
             </div>
             
             <div class="admin-header">
+                <div class="admin-header">
                 <h2>📋 待審核清單</h2>
                 <div style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end;">
+                    <button class="refresh-btn" id="btnBatchMode" onclick="toggleBatchMode()" style="background:#e3f2fd; color:#1565c0; font-weight:bold;">☑️ 批次審核</button>
+                    
                     <button class="refresh-btn" id="btnToggleCultural" onclick="toggleCulturalMode()" style="background:#f3e5f5; color:#8e24aa; font-weight:bold;">🎭 文化時數</button>
                     <button class="refresh-btn" onclick="openManualEntryUI()" style="background:#fff3e0; color:#e65100; font-weight:bold;">➕ 補登</button>
                     <button class="refresh-btn" onclick="openAdminQueryUI()" style="background:#e0f2f1; color:#00897b; font-weight:bold;">📊 總查詢</button>
                     <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重整</button>
                 </div>
             </div>
+
+            <button id="submitBatchBtn" onclick="submitBatchApprove()" style="display:none; width:100%; padding:15px; font-size:16px; font-weight:bold; background:#00B900; color:white; border:none; border-radius:8px; margin-bottom:15px; box-shadow:0 4px 6px rgba(0,0,0,0.1); cursor:pointer;">
+                ✅ 送出批次核准 (已選 0 筆)
+            </button>
             
 
             <div id="adminRecordsContainer">
@@ -552,10 +559,14 @@
                             : `<input type="hidden" id="mul_${record.uuid}" value="1">`; 
                         
                         card.innerHTML = `
-                            <div class="record-title">
-                                <span>👤 ${record.volunteerName}</span>
+                            <div class="record-title" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleCardCheckbox('${record.uuid}', event)">
+                                <div style="display:flex; align-items:center;">
+                                    <input type="checkbox" class="batch-checkbox" id="cb_${record.uuid}" value="${record.uuid}" style="display:none; transform: scale(1.5); margin-right: 15px; cursor:pointer;" onclick="event.stopPropagation(); updateBatchCount();">
+                                    <span>👤 ${record.volunteerName}</span>
+                                </div>
                                 <span class="record-tag">${record.checkType}</span>
                             </div>
+                            
                             <div style="font-size:14px; margin-bottom:12px; color:#555;">📍 服務內容：${record.serviceType}</div>
                             
                             <div style="font-size:14px; margin-bottom:15px; background: ${styles.bg}; padding: 12px; border-radius: 8px; border: 1px solid ${styles.border}; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
@@ -581,7 +592,7 @@
                                 </div>
                             </div>
                             
-                            <button class="approve-btn" onclick="approveRecord('${record.uuid}')">✅ 確認核准</button>
+                            <button class="approve-btn" id="btnApprove_${record.uuid}" onclick="approveRecord('${record.uuid}')">✅ 確認核准</button>
                         `;
                         container.appendChild(card);
                     });
@@ -1329,6 +1340,107 @@
             }).catch(err => {
                 alert("網路異常：" + err.message);
                 buildDynamicServiceOptions();
+            });
+        }
+
+        // ==========================================
+        // 📍 館員批次審核邏輯
+        // ==========================================
+        let isBatchMode = false;
+
+        function toggleBatchMode() {
+            isBatchMode = !isBatchMode;
+            const btn = document.getElementById('btnBatchMode');
+            const checkboxes = document.querySelectorAll('.batch-checkbox');
+            const individualBtns = document.querySelectorAll('.approve-btn');
+            const submitBatchBtn = document.getElementById('submitBatchBtn');
+
+            if (isBatchMode) {
+                // 開啟批次模式
+                btn.innerText = "❌ 退出批次";
+                btn.style.background = "#ffebee";
+                btn.style.color = "#c62828";
+                checkboxes.forEach(cb => { cb.style.display = 'inline-block'; cb.checked = false; });
+                individualBtns.forEach(b => b.style.display = 'none'); // 隱藏單筆按鈕
+                submitBatchBtn.style.display = 'block'; // 顯示大按鈕
+                updateBatchCount();
+            } else {
+                // 關閉批次模式
+                btn.innerText = "☑️ 批次審核";
+                btn.style.background = "#e3f2fd";
+                btn.style.color = "#1565c0";
+                checkboxes.forEach(cb => cb.style.display = 'none');
+                individualBtns.forEach(b => b.style.display = 'block'); // 恢復單筆按鈕
+                submitBatchBtn.style.display = 'none'; // 隱藏大按鈕
+            }
+        }
+
+        // 點擊卡片標題也可以勾選
+        function toggleCardCheckbox(uuid, event) {
+            if (!isBatchMode) return;
+            if (event.target.tagName.toLowerCase() === 'input') return; // 避免重複觸發
+            const cb = document.getElementById(`cb_${uuid}`);
+            if (cb) {
+                cb.checked = !cb.checked;
+                updateBatchCount();
+            }
+        }
+
+        // 更新已選取數量
+        function updateBatchCount() {
+            const count = document.querySelectorAll('.batch-checkbox:checked').length;
+            const btn = document.getElementById('submitBatchBtn');
+            btn.innerText = `✅ 送出批次核准 (已選 ${count} 筆)`;
+            if(count > 0) {
+                btn.style.background = "#00B900";
+                btn.disabled = false;
+            } else {
+                btn.style.background = "#ccc";
+                btn.disabled = true;
+            }
+        }
+
+        // 執行批次送出
+        function submitBatchApprove() {
+            const checkboxes = document.querySelectorAll('.batch-checkbox:checked');
+            if (checkboxes.length === 0) return;
+
+            const records = [];
+            checkboxes.forEach(cb => {
+                const uuid = cb.value;
+                const hourSelect = document.getElementById(`hour_${uuid}`);
+                const minSelect = document.getElementById(`min_${uuid}`);
+                const datePart = hourSelect.getAttribute('data-date'); 
+                const newTime = `${datePart}T${hourSelect.value}:${minSelect.value}`;
+                
+                // 簽退紀錄沒有加權欄位，預設給 1
+                const mulInput = document.getElementById(`mul_${uuid}`);
+                const multiplier = mulInput ? mulInput.value : 1; 
+                const remark = document.getElementById(`rem_${uuid}`).value;
+
+                records.push({ uuid, newTime, multiplier, remark });
+            });
+
+            const btn = document.getElementById('submitBatchBtn');
+            btn.disabled = true; btn.innerText = "批次處理中 ⏳...";
+
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ 
+                    action: "batchApprove", userId: currentUserId, records: records, staffName: dbUserName
+                })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") {
+                    alert(result.message);
+                    toggleBatchMode(); // 自動關閉批次模式
+                    fetchPendingRecords(); // 重新整理清單
+                } else {
+                    alert("批次核准失敗：" + result.message);
+                    btn.disabled = false; btn.innerText = `✅ 送出批次核准 (已選 ${checkboxes.length} 筆)`;
+                }
+            }).catch(err => {
+                alert("網路異常：" + err.message);
+                btn.disabled = false; btn.innerText = `✅ 送出批次核准 (已選 ${checkboxes.length} 筆)`;
             });
         }
         
