@@ -80,10 +80,7 @@
             <div class="form-section">
                 <label style="font-weight: bold; display: block;">📋 服務內容：</label>
                 <select id="serviceSelect">
-                    <option value="活動">活動</option>
-                    <option value="特色空間">特色空間</option>
-                    <option value="導覽">導覽</option>
-                </select>
+                    </select>
                 <label style="font-weight: bold; display: block; margin-top:10px;">⏱️ 打卡狀態：</label>
                 <div style="display: flex; gap: 20px; margin-top: 5px;">
                     <label><input type="radio" name="checkType" value="簽到" checked> 簽到</label>
@@ -155,9 +152,10 @@
             
             <div class="admin-header">
                 <h2>📋 待審核清單</h2>
-                <div>
-                    <button class="refresh-btn" onclick="openManualEntryUI()" style="background:#fff3e0; color:#e65100; font-weight:bold; margin-right:5px;">➕ 補登</button>
-                    <button class="refresh-btn" onclick="openAdminQueryUI()" style="background:#e0f2f1; color:#00897b; font-weight:bold; margin-right:5px;">📊 總查詢</button>
+                <div style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end;">
+                    <button class="refresh-btn" id="btnToggleCultural" onclick="toggleCulturalMode()" style="background:#f3e5f5; color:#8e24aa; font-weight:bold;">🎭 文化時數</button>
+                    <button class="refresh-btn" onclick="openManualEntryUI()" style="background:#fff3e0; color:#e65100; font-weight:bold;">➕ 補登</button>
+                    <button class="refresh-btn" onclick="openAdminQueryUI()" style="background:#e0f2f1; color:#00897b; font-weight:bold;">📊 總查詢</button>
                     <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重整</button>
                 </div>
             </div>
@@ -242,11 +240,9 @@
                 </div>
 
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">📋 服務內容：</label>
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">📋 服務內容：</label>
                 <select id="manualService" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom:15px;">
-                    <option value="活動">活動</option>
-                    <option value="特色空間">特色空間</option>
-                    <option value="導覽">導覽</option>
-                </select>
+                    </select>
 
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">⏱️ 打卡狀態：</label>
                 <div style="display: flex; gap: 20px; margin-bottom: 15px;">
@@ -280,6 +276,7 @@
     </div>
 
     <script>
+        let isCulturalHoursEnabled = false; // 📍 記錄文化時數是否開啟
         const LIFF_ID = "2008914129-7KGP9Yxy"; 
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
 
@@ -337,9 +334,12 @@
         function checkBindingStatus() {
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-                // 📍 核心修改：把 currentLineName 一起傳過去
                 body: JSON.stringify({ action: "checkBinding", userId: currentUserId, lineName: currentLineName })
             }).then(res => res.json()).then(result => {
+                // 📍 同步文化時數狀態並更新選單
+                isCulturalHoursEnabled = result.culturalHoursEnabled || false;
+                buildDynamicServiceOptions();
+
                 if (result.status === "bound") {
                     dbUserName = result.name;
                     globalGroup = result.group; 
@@ -353,6 +353,9 @@
                     switchSection(document.getElementById('sectionBind'));
                     document.getElementById('systemSubtitle').innerText = "首次使用驗證";
                 }
+            }).catch(err => {
+                alert("⚠️ 系統連線異常！\n\n可能原因：\n1. 網路連線不穩\n2. GAS 後端未正確發佈 (請確認存取權限為「所有人」)\n3. GAS 網址已變更\n\n錯誤細節：" + err.message);
+                document.getElementById('sectionLoading').innerHTML = `<p style="color:red; font-weight:bold;">連線失敗，請檢查設定後重新整理。</p>`;
             });
         }
        // 📍 系統管理員：一鍵切換視角功能
@@ -383,6 +386,9 @@
             }).then(res => res.json()).then(result => {
                 if (result.status === "success") {
                     dbUserName = result.name;
+                    isCulturalHoursEnabled = result.culturalHoursEnabled || false; // 同步狀態
+                    buildDynamicServiceOptions();
+                    
                     alert("綁定成功！歡迎，" + dbUserName);
                     if (result.role === "staff") {
                         setupAdminUI(result.group, result.title); 
@@ -1232,6 +1238,72 @@
             }).catch(err => {
                 alert("網路異常，補登失敗：" + err.message);
                 btn.disabled = false; btn.innerText = "✅ 確認補登";
+            });
+        }
+
+        // ==========================================
+        // 📍 動態渲染「服務內容」與「文化時數開關」控制
+        // ==========================================
+        function buildDynamicServiceOptions() {
+            const optionsHtml = `
+                <option value="活動支援">活動支援</option>
+                <option value="五感值班">五感值班</option>
+                <option value="創客值班">創客值班</option>
+                <option value="導覽">導覽</option>
+                ${isCulturalHoursEnabled ? '<option value="文化時數">文化時數</option>' : ''}
+            `;
+
+            // 更新志工打卡選單
+            const serviceSelect = document.getElementById('serviceSelect');
+            if (serviceSelect) {
+                const currentVal = serviceSelect.value;
+                serviceSelect.innerHTML = optionsHtml;
+                if (serviceSelect.querySelector(`option[value="${currentVal}"]`)) serviceSelect.value = currentVal;
+            }
+
+            // 更新館員補登選單
+            const manualSelect = document.getElementById('manualService');
+            if (manualSelect) {
+                const currentManualVal = manualSelect.value;
+                manualSelect.innerHTML = optionsHtml;
+                if (manualSelect.querySelector(`option[value="${currentManualVal}"]`)) manualSelect.value = currentManualVal;
+            }
+
+            // 更新館員開關按鈕的外觀
+            const btn = document.getElementById('btnToggleCultural');
+            if (btn) {
+                if (isCulturalHoursEnabled) {
+                    btn.innerText = "🛑 關閉文化時數";
+                    btn.style.background = "#ffebee";
+                    btn.style.color = "#c62828";
+                } else {
+                    btn.innerText = "🎭 開放文化時數";
+                    btn.style.background = "#f3e5f5";
+                    btn.style.color = "#8e24aa";
+                }
+            }
+        }
+
+        function toggleCulturalMode() {
+            const newState = !isCulturalHoursEnabled;
+            const btn = document.getElementById('btnToggleCultural');
+            btn.innerText = "處理中 ⏳...";
+            
+            fetch(GAS_URL, {
+                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "toggleCulturalHours", userId: currentUserId, enable: newState })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") {
+                    isCulturalHoursEnabled = result.newState;
+                    buildDynamicServiceOptions(); // 重新繪製選單與按鈕
+                    alert(isCulturalHoursEnabled ? "✅ 已開放「文化時數」！全館志工現在可以看見此選項了。" : "🚫 已關閉「文化時數」！");
+                } else {
+                    alert("權限不足或操作失敗：" + result.message);
+                    buildDynamicServiceOptions(); 
+                }
+            }).catch(err => {
+                alert("網路異常：" + err.message);
+                buildDynamicServiceOptions();
             });
         }
         
