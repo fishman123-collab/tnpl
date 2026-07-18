@@ -501,14 +501,18 @@ function showSmartCheckInUI(titleText, shiftObj) {
                             : `<input type="hidden" id="srv_${record.uuid}" value="${record.serviceType}">
                                <div style="font-size:14px; color:#555; background:#f5f5f5; padding:8px; border-radius:6px; border:1px solid #ddd; width:100%; box-sizing:border-box; font-weight:bold;">📍 簽退 (自動同簽到服務：${record.serviceType})</div>`;
 
+                        const defaultMul = (isSignIn && record.autoMultiplier !== undefined) ? record.autoMultiplier : 1;
+                        const defaultExt = (isSignIn && record.autoExtraHours !== undefined) ? record.autoExtraHours : 0;
+                        const defaultRem = isSignIn ? (record.autoRemark || "") : "";
+
                         const multiplierExtraHtml = isSignIn 
                             ? `<div style="flex:1;">
                                    <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">⭐ 加權：</label>
-                                   <input type="number" id="mul_${record.uuid}" value="1" step="0.5" min="1" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
+                                   <input type="number" id="mul_${record.uuid}" value="${defaultMul}" step="0.5" min="1" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
                                </div>
                                <div style="flex:1;">
                                    <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">➕ 加時：</label>
-                                   <input type="number" id="ext_${record.uuid}" value="0" step="0.5" min="0" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
+                                   <input type="number" id="ext_${record.uuid}" value="${defaultExt}" step="0.5" min="0" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
                                </div>`
                             : `<input type="hidden" id="mul_${record.uuid}" value="1"><input type="hidden" id="ext_${record.uuid}" value="0">`;
                             
@@ -534,7 +538,7 @@ function showSmartCheckInUI(titleText, shiftObj) {
                             </div>
                             <div style="margin-bottom: 15px;">
                                 <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">📝 館員備註：</label>
-                                <input type="text" id="rem_${record.uuid}" placeholder="選填" style="margin:0; padding:8px; width:100%; box-sizing:border-box; border-radius:6px; border:1px solid #ccc;">
+                                <input type="text" id="rem_${record.uuid}" value="${defaultRem}" placeholder="選填" style="margin:0; padding:8px; width:100%; box-sizing:border-box; border-radius:6px; border:1px solid #ccc;">
                             </div>
                             <button class="approve-btn" id="btnApprove_${record.uuid}" onclick="approveRecord('${record.uuid}')">✅ 確認核准</button>
                         `;
@@ -584,7 +588,7 @@ function showSmartCheckInUI(titleText, shiftObj) {
             const extraText = r.extraHours > 0 ? `<span style="color:#059669; font-size:12px; font-weight:bold; background:#d1fae5; padding:2px 6px; border-radius:4px; margin-left:5px;">➕加時 +${r.extraHours}</span>` : "";
             const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px; margin-left:5px;">⭐x${r.multiplier}</span>` : "";
             const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
-            const hoursDisplay = r.multiplier > 1 || r.extraHours > 0 ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-bottom:3px; display:block;">(原始 ${r.rawHours.toFixed(1)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
+            const hoursDisplay = r.multiplier > 1 || r.extraHours > 0 ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-bottom:3px; display:block;">(原始 ${r.rawHours.toFixed(2)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
             let nameHtml = showName ? `<div style="font-weight:bold; font-size:16px; margin-bottom:5px;">👤 ${r.volunteerName}</div>` : "";
             return `
                 <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
@@ -853,7 +857,7 @@ function showSmartCheckInUI(titleText, shiftObj) {
             let csvContent = "\uFEFF"; csvContent += "志工姓名,日期,簽到,簽退,服務內容,原始時數,加權,加時,結算時數,確認館員,備註\n";
             filtered.forEach(r => {
                 const safeRemark = r.remark ? r.remark.replace(/"/g, '""') : "";
-                const row = [ r.volunteerName, r.date, r.startTime, r.endTime, r.serviceType, r.rawHours.toFixed(1), r.multiplier, r.extraHours.toFixed(1), r.finalHours.toFixed(1), r.staffName, `"${safeRemark}"` ];
+                const row = [ r.volunteerName, r.date, r.startTime, r.endTime, r.serviceType, r.rawHours.toFixed(2), r.multiplier, r.extraHours.toFixed(1), r.finalHours.toFixed(1), r.staffName, `"${safeRemark}"` ];
                 csvContent += row.join(",") + "\n";
             });
 
