@@ -73,6 +73,13 @@
                 </div>
             </div>
 
+            <div id="anomalyAlertArea" class="alert-box" style="display:none; background:#fff8e1; border:2px solid #ffb300;">
+               <div style="font-weight: bold; color: #d84315; margin-bottom: 5px; font-size:16px;">⚠️ 異常提醒 (跨日未簽到/未簽退)</div>
+               <div style="font-size: 14px; color: #555;">系統偵測到您有以下日期紀錄異常：</div>
+               <ul id="anomalyList" style="font-size: 13px; color: #d84315; font-weight:bold; margin-top: 5px; padding-left: 20px;"></ul>
+               <div style="font-size: 13px; color: #d84315; margin-top: 8px; font-weight: bold;">※ 本次打卡仍可繼續，但請記得提醒館員為您補登，以免該段時數流失！</div>
+            </div>
+
             <div id="unapprovedAlert" class="alert-box">
                <div style="font-weight: bold; color: #f57f17; margin-bottom: 5px;">💡 親愛的夥伴您好：</div>
                <div style="font-size: 14px; color: #555;">您尚有 <span id="unapprovedCount" style="color:red; font-weight:bold;">0</span> 筆打卡等待審核，明細如下：</div>
@@ -81,6 +88,31 @@
             </div>
 
             <div id="lastActionStatus" style="text-align:center; font-weight:bold; color:var(--secondary-text); margin-bottom: 10px; display:none;"></div>
+
+            <!-- 🧪 系統管理員虛擬定位測試專區 (僅限系統管理員顯示) -->
+            <div id="sysAdminMockGpsPanel" style="display:none; background:#f3e5f5; border:2px solid #ab47bc; border-radius:12px; padding:15px; margin-bottom:15px;">
+                <div style="font-weight:bold; color:#6a1b9a; font-size:15px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                    <span>🧪</span> 系統管理員測試專區 (虛擬定位)
+                </div>
+                <div style="font-size:12px; color:#4a148c; background:#e1bee7; padding:8px; border-radius:6px; margin-bottom:10px; line-height:1.5;">
+                    <b>📍 系統設定基準座標：</b>新總館 (23.0250, 120.2378)<br>
+                    <b>📏 允許打卡範圍：</b>100 公尺以內
+                </div>
+                <label style="font-weight:bold; font-size:14px; color:#4a148c; cursor:pointer; display:block; margin-bottom:8px;">
+                    <input type="checkbox" id="enableMockGps" onchange="toggleMockGpsInputs()"> 啟用虛擬測試定位 (替代手機實體 GPS)
+                </label>
+                <div id="mockGpsFields" style="display:none; margin-top:8px; background:white; padding:10px; border-radius:8px; border:1px solid #ce93d8;">
+                    <div style="font-size:13px; font-weight:bold; color:#6a1b9a; margin-bottom:6px;">請選擇測試模擬狀態：</div>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <label style="font-size:13px; color:#1b5e20; cursor:pointer; font-weight:bold;">
+                            <input type="radio" name="mockGpsMode" value="inside" checked> 🎯 範圍內 (傳送基準座標，計算 0 公尺)
+                        </label>
+                        <label style="font-size:13px; color:#b71c1c; cursor:pointer; font-weight:bold;">
+                            <input type="radio" name="mockGpsMode" value="outside"> ❌ 範圍外 (傳送超距座標，計算 500 公尺)
+                        </label>
+                    </div>
+                </div>
+            </div>
 
             <!-- 智慧打卡區塊 (簽到與簽退共用) -->
             <div id="smartCheckInArea" class="smart-checkin-box">
@@ -109,6 +141,11 @@
                     <button class="checkin-btn" id="checkInBtn">
                         <span style="font-size: 40px;">📍</span><span id="checkInBtnText">點我打卡</span>
                     </button>
+                    <!-- 暫時停用「自主補登」前台按鈕
+                    <button onclick="openQuotaRemedyModal()" style="margin-top:15px; width:100%; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <span>✍️</span> 自主補登時數 (免定位/每年限5次，已使用 <span id="usedQuotaBadge">0</span>/5 次)
+                    </button>
+                    -->
                 </div>
             </div>
 
@@ -142,6 +179,7 @@
                         <span style="font-size: 14px; color: var(--secondary-text);">該月總計時數</span>
                         <div id="monthlyTotalHours" style="font-size: 28px; font-weight: bold; color: var(--primary-color);">0.0 <span style="font-size:16px;">小時</span></div>
                     </div>
+                    <div style="font-size:12px; color:#64748b; margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; border:1px dashed #cbd5e1; text-align:left; line-height:1.5;">📢 <b>時數採計說明：</b>單次班別時數計算至小數點第2位；全月總時數四捨五入至第1位。半年度上傳備查時，總時數未滿 0.5 小時（30分鐘）之尾數將依規定不予採計。</div>
                 </div>
                 <div id="monthlyListContainer"></div>
             </div>
@@ -153,6 +191,7 @@
                         <span style="font-size: 14px; color: var(--secondary-text);">年度累積總計</span>
                         <div id="yearlyTotalHours" style="font-size: 28px; font-weight: bold; color: #d97706;">0.0 <span style="font-size:16px;">小時</span></div>
                     </div>
+                    <div style="font-size:12px; color:#64748b; margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; border:1px dashed #cbd5e1; text-align:left; line-height:1.5;">📢 <b>時數採計說明：</b>單次班別時數計算至小數點第2位；全月總時數四捨五入至第1位。半年度上傳備查時，總時數未滿 0.5 小時（30分鐘）之尾數將依規定不予採計。</div>
                 </div>
                 <div id="yearlyListContainer"></div>
             </div>
@@ -162,15 +201,18 @@
             <div class="profile-card" style="margin-bottom: 15px; padding: 15px;">
                 <div><h2 id="staffName" style="margin: 0; font-size: 18px;">館員您好</h2><p id="adminRole" style="margin: 3px 0 0; font-size: 13px; color: var(--secondary-text);">管理員模式已啟動</p></div>
             </div>
-            <div class="admin-header">
                 <h2>📋 待審核清單</h2>
                 <div style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end;">
                     <button class="refresh-btn" id="btnBatchMode" onclick="toggleBatchMode()" style="background:#e3f2fd; color:#1565c0; font-weight:bold;">☑️ 批次審核</button>
                     <button class="refresh-btn" id="btnToggleCultural" onclick="toggleCulturalMode()" style="background:#f3e5f5; color:#8e24aa; font-weight:bold;">🎭 文化時數</button>
+                    <button class="refresh-btn" id="btnToggleManualCheckIn" onclick="toggleManualCheckInMode()" style="background:#e8f5e9; color:#2e7d32; font-weight:bold;">✋ 手動打卡</button>
                     <button class="refresh-btn" onclick="openManualEntryUI()" style="background:#fff3e0; color:#e65100; font-weight:bold;">➕ 補登</button>
                     <button class="refresh-btn" onclick="openAdminQueryUI()" style="background:#e0f2f1; color:#00897b; font-weight:bold;">📊 總查詢</button>
                     <button class="refresh-btn" onclick="fetchPendingRecords()">🔄 重整</button>
                 </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button id="btnPendingSortVol" onclick="setPendingGroupMode('volunteer')" style="flex:1; padding:8px; border-radius:8px; border:none; background:var(--primary-color); color:white; font-weight:bold; cursor:pointer;">👤 依志工排序</button>
+                <button id="btnPendingSortAct" onclick="setPendingGroupMode('activity')" style="flex:1; padding:8px; border-radius:8px; border:1px solid #ccc; background:white; color:var(--text-color); font-weight:bold; cursor:pointer;">🎪 依活動/班別分組</button>
             </div>
             <button id="submitBatchBtn" onclick="submitBatchApprove()" style="display:none; width:100%; padding:15px; font-size:16px; font-weight:bold; background:#00B900; color:white; border:none; border-radius:8px; margin-bottom:15px; box-shadow:0 4px 6px rgba(0,0,0,0.1); cursor:pointer;">
                 ✅ 送出批次核准 (已選 0 筆)
@@ -255,15 +297,17 @@
     </div>
 
     <script>
-        let isCulturalHoursEnabled = false; 
+        let isCulturalHoursEnabled = false;
+        let isManualCheckInEnabled = false;
         const LIFF_ID = "2008914129-7KGP9Yxy"; 
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec";  
 
         let currentUserId = ""; let currentLineName = ""; let dbUserName = ""; let globalGroup = ""; let globalTitle = ""; 
         let currentSmartShift = null; 
 
         const froggySuccessImg = `<img src="DK1.png" alt="成功" style="height:100px; margin-bottom:15px;">`;
         const froggyErrorImg = `<img src="DK2.png" alt="失敗" style="height:100px; margin-bottom:15px;">`;
+
 
         function formatDateWithDay(dateStr) {
             const dateObj = new Date(dateStr.replace(/-/g, '/'));
@@ -291,35 +335,28 @@
             else return `${group} - ${displayTitle}`;
         }
 
-        // 🎉 更新後的程式碼 (加入顏色與圖示的動態判斷)
-function showSmartCheckInUI(titleText, shiftObj) {
-    document.getElementById('smartCheckInArea').style.display = 'block';
-    document.getElementById('manualCheckInArea').style.display = 'none';
-    
-    // 填入班別明細
-    document.getElementById('smartShiftDetail').innerText = shiftObj.detail;
-    
-    const btn = document.getElementById('smartCheckInBtn');
-    const titleEl = document.getElementById('smartCheckInTitle');
-    
-    if (shiftObj.expectedCheckType === "簽退") {
-        // 📍 簽退狀態：修改標題文字與顏色，搭配紅色揮手按鈕
-        titleEl.innerText = "💡 系統偵測到您的目前值勤為：";
-        titleEl.style.color = "#c62828"; // 改為深紅色系，與簽退按鈕呼應
-        
-        btn.style.background = "#ff4d4f"; 
-        btn.style.boxShadow = "0 4px 6px rgba(255, 77, 79, 0.3)";
-        btn.innerHTML = `👋 沒錯，我要確認 <span id="smartCheckTypeLabel">簽退</span>`;
-    } else {
-        // 📍 簽到狀態：恢復原有的綠色系與文字
-        titleEl.innerText = "✨ 系統偵測到您有一筆即將開始的勤務：";
-        titleEl.style.color = "#00695c"; 
-        
-        btn.style.background = "#00B900"; 
-        btn.style.boxShadow = "0 4px 6px rgba(0, 185, 0, 0.3)";
-        btn.innerHTML = `✅ 沒錯，我要確認 <span id="smartCheckTypeLabel">簽到</span>`;
-    }
-}
+        function showSmartCheckInUI(titleText, shiftObj) {
+            document.getElementById('smartCheckInArea').style.display = 'block';
+            document.getElementById('manualCheckInArea').style.display = 'none';
+            document.getElementById('smartShiftDetail').innerText = shiftObj.detail;
+            const btn = document.getElementById('smartCheckInBtn');
+            const titleEl = document.getElementById('smartCheckInTitle');
+            if (shiftObj.expectedCheckType === "簽退") {
+                titleEl.innerText = "💡 系統偵測到您的目前值勤為：";
+                titleEl.style.color = "#c62828";
+                btn.style.background = "#ff4d4f"; 
+                btn.style.boxShadow = "0 4px 6px rgba(255, 77, 79, 0.3)";
+                btn.innerHTML = `👋 沒錯，我要確認 <span id="smartCheckTypeLabel">簽退</span>`;
+            } else {
+                titleEl.innerText = "✨ 系統偵測到您有一筆即將開始的勤務：";
+                titleEl.style.color = "#00695c"; 
+                btn.style.background = "#00B900"; 
+                btn.style.boxShadow = "0 4px 6px rgba(0, 185, 0, 0.3)";
+                btn.innerHTML = `✅ 沒錯，我要確認 <span id="smartCheckTypeLabel">簽到</span>`;
+            }
+        }
+
+        let globalUsedQuota = 0;
 
         function checkBindingStatus() {
             fetch(GAS_URL, {
@@ -327,6 +364,11 @@ function showSmartCheckInUI(titleText, shiftObj) {
                 body: JSON.stringify({ action: "checkBinding", userId: currentUserId, lineName: currentLineName })
             }).then(res => res.json()).then(result => {
                 isCulturalHoursEnabled = result.culturalHoursEnabled || false;
+                isManualCheckInEnabled = result.manualCheckInEnabled || false;
+                globalUsedQuota = result.usedQuota || 0;
+                const badgeEl = document.getElementById('usedQuotaBadge');
+                if (badgeEl) badgeEl.innerText = globalUsedQuota;
+
                 buildDynamicServiceOptions();
                 if (result.status === "bound") {
                     dbUserName = result.name; globalGroup = result.group; globalTitle = result.title;
@@ -336,26 +378,55 @@ function showSmartCheckInUI(titleText, shiftObj) {
                         let listHtml = '';
                         result.unapproved.forEach(u => listHtml += `<li>${u.date} ${u.time} - ${u.type} (${u.service})</li>`);
                         document.getElementById('unapprovedList').innerHTML = listHtml;
+                    } else {
+                        document.getElementById('unapprovedAlert').style.display = 'none';
                     }
+                    if (result.hasAnomaly && result.anomalies && result.anomalies.length > 0) {
+                        document.getElementById('anomalyAlertArea').style.display = 'block';
+                        let aHtml = '';
+                        result.anomalies.forEach(a => {
+                            aHtml += `<li>${a.date} - ${a.service} (${a.issue})</li>`;
+                        });
+                        document.getElementById('anomalyList').innerHTML = aHtml;
+                    } else {
+                        document.getElementById('anomalyAlertArea').style.display = 'none';
+                    }
+
                     if (result.lastAction) {
                         const actionDiv = document.getElementById('lastActionStatus');
                         actionDiv.style.display = 'block';
                         actionDiv.innerText = `🔄 今日上一筆紀錄：【 ${result.lastAction} 】`;
+
+                        if (result.lastAction === "簽到") {
+                            const signOutRadio = document.querySelector('input[name="checkType"][value="簽退"]');
+                            if (signOutRadio) signOutRadio.checked = true;
+                        }
                     }
                     if (result.smartShift) {
                         currentSmartShift = result.smartShift;
                         showSmartCheckInUI("系統偵測到您有一筆即將開始的勤務：", currentSmartShift);
-                    } else if (result.lastAction === "簽到") {
-                        currentSmartShift = {
-                            detail: `📍 進行中勤務：${result.lastService}`,
-                            mappedService: result.lastService,
-                            expectedCheckType: "簽退"
-                        };
-                        showSmartCheckInUI("您有一筆勤務尚未簽退，請確認：", currentSmartShift);
                     } else {
                         document.getElementById('smartCheckInArea').style.display = 'none';
-                        document.getElementById('manualCheckInArea').style.display = 'block';
+                        if (result.manualCheckInEnabled || result.culturalHoursEnabled) {
+                            document.getElementById('manualCheckInArea').style.display = 'block';
+                        } else {
+                            document.getElementById('manualCheckInArea').style.display = 'none';
+                            if (!document.getElementById('manualCheckInDisabledMsg')) {
+                                const msgDiv = document.createElement('div');
+                                msgDiv.id = 'manualCheckInDisabledMsg';
+                                msgDiv.style.cssText = "background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px 15px; text-align: center; color: #64748b; margin-top: 15px;";
+                                msgDiv.innerHTML = `<div style="font-size: 40px; margin-bottom: 10px;">☕</div><div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">目前無待處理之打卡勤務</div><div style="font-size: 14px;">若您臨時受派支援，請洽詢服務台館員為您設定排班或補登紀錄。</div>`;
+                                document.getElementById('sectionCheckIn').appendChild(msgDiv);
+                            } else {
+                                document.getElementById('manualCheckInDisabledMsg').style.display = 'block';
+                            }
+                        }
                     }
+                    if (result.smartShift || result.manualCheckInEnabled || result.culturalHoursEnabled) {
+                        const disabledMsg = document.getElementById('manualCheckInDisabledMsg');
+                        if (disabledMsg) disabledMsg.style.display = 'none';
+                    }
+
                     if (result.role === "staff") setupAdminUI(globalGroup, globalTitle); 
                     else setupCheckInUI(globalGroup, globalTitle);
                 } else {
@@ -394,11 +465,27 @@ function showSmartCheckInUI(titleText, shiftObj) {
             });
         });
 
+        function toggleMockGpsInputs() {
+            const isChecked = document.getElementById('enableMockGps').checked;
+            document.getElementById('mockGpsFields').style.display = isChecked ? 'block' : 'none';
+        }
+
+        function setMockGpsPreset(lat, lng) {
+            document.getElementById('mockLat').value = lat;
+            document.getElementById('mockLng').value = lng;
+        }
+
         function setupCheckInUI(group, title) {
             switchSection(document.getElementById('sectionCheckIn'));
             document.getElementById('systemSubtitle').innerText = "定位打卡/時數查詢系統";
             document.getElementById('userName').innerText = dbUserName;
             document.getElementById('userRole').innerText = formatRoleDisplay(group, title);
+            
+            const mockPanel = document.getElementById('sysAdminMockGpsPanel');
+            if (mockPanel) {
+                mockPanel.style.display = (title === "系統管理員" || globalTitle === "系統管理員") ? 'block' : 'none';
+            }
+
             const leaderBtn = document.getElementById('leaderQueryBtn');
             if (title === "大隊長" || title === "副隊長" || title === "小組長" || title === "副小組長") {
                 leaderBtn.style.display = 'flex';
@@ -413,7 +500,7 @@ function showSmartCheckInUI(titleText, shiftObj) {
         }
 
         document.getElementById('smartCheckInBtn').addEventListener('click', () => {
-            executeCheckIn(currentSmartShift.mappedService, currentSmartShift.expectedCheckType, document.getElementById('smartCheckInBtn'));
+            executeCheckIn(currentSmartShift.mappedService, currentSmartShift.expectedCheckType, document.getElementById('smartCheckInBtn'), false, "", "", currentSmartShift.detail);
         });
 
         document.getElementById('checkInBtn').addEventListener('click', () => {
@@ -424,33 +511,153 @@ function showSmartCheckInUI(titleText, shiftObj) {
             executeCheckIn(serviceType, checkTypeInput.value, document.getElementById('checkInBtn'));
         });
 
-        function executeCheckIn(serviceType, checkType, btnElement) {
+        function showGpsPermissionGuideModal(retryCallback) {
+            const guideHtml = `
+                <div style="text-align:left; font-size:14px; color:#333; line-height:1.6;">
+                    <div style="font-weight:bold; color:#c62828; margin-bottom:8px; font-size:15px;">📍 手機位置存取權限已被關閉</div>
+                    <div style="background:#fff8e1; padding:10px; border-radius:8px; border-left:4px solid #ffb300; margin-bottom:10px; font-size:13px;">
+                        瀏覽器安全性限制阻止跳出權限詢問。請依據您的手機類型操作解鎖（<b>無須關閉或重開 LINE</b>）：
+                    </div>
+                    <div style="margin-bottom:8px;"><b>🍎 iPhone (iOS / LINE)：</b><br>1. 點擊網址列左上角「<b>AA</b>」或「<b>🔒鎖頭</b>」圖示<br>2. 選擇「<b>網站設定</b>」➔「<b>位置</b>」➔ 改為「<b>允許</b>」</div>
+                    <div style="margin-bottom:10px;"><b>🤖 Android (Chrome / LINE)：</b><br>1. 點擊右上角「<b>⋮</b>」或網址列「<b>🔒鎖頭</b>」<br>2. 選擇「<b>權限 / 網站設定</b>」➔「<b>位置</b>」➔ 改為「<b>允許</b>」</div>
+                </div>
+            `;
+            
+            document.getElementById('resultIcon').innerHTML = froggyErrorImg;
+            document.getElementById('resultStatus').innerText = "📍 定位權限說明";
+            document.getElementById('resultDistance').innerHTML = guideHtml;
+            document.getElementById('resultOverlay').classList.add('show');
+        }
+
+        /* 暫時停用自主補登彈窗邏輯
+        function openQuotaRemedyModal() {
+            if (globalUsedQuota >= 5) {
+                alert("⛔ 您今年的 5 次自主補登額度已用完。\n如有補登需求，請親洽館員由後台協助人工補登。");
+                return;
+            }
+            const remedyHtml = `
+                <div style="text-align:left; font-size:14px; color:#333;">
+                    <div style="background:#e0f2f1; padding:10px; border-radius:8px; border-left:4px solid #00897b; margin-bottom:12px; font-size:13px; color:#004d40;">
+                        💡 <b>親愛的志工夥伴您好：</b><br>
+                        每年享有 5 次免定位自主補登額度（目前已使用 <b>${globalUsedQuota}</b>/5 次）。請填寫實際執勤之日期與時間：
+                    </div>
+                    <label style="font-weight:bold; display:block; margin-bottom:4px;">📋 服務內容：</label>
+                    <select id="remedyService" style="width:100%; padding:8px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;">
+                       ${document.getElementById('serviceSelect').innerHTML}
+                    </select>
+                    <label style="font-weight:bold; display:block; margin-bottom:4px;">⏱️ 打卡類別：</label>
+                    <div style="display:flex; gap:15px; margin-bottom:10px;">
+                       <label><input type="radio" name="remedyCheckType" value="簽到" checked> 簽到</label>
+                       <label><input type="radio" name="remedyCheckType" value="簽退"> 簽退</label>
+                    </div>
+                    <label style="font-weight:bold; display:block; margin-bottom:4px;">📅 補登日期與時間：</label>
+                    <input type="datetime-local" id="remedyDateTime" style="width:100%; padding:8px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box;">
+                    <button class="bind-btn" style="background:#00B900; width:100%; padding:12px;" onclick="submitQuotaRemedy()">✅ 確認自主補登</button>
+                </div>
+            `;
+            document.getElementById('resultIcon').innerHTML = `<span style="font-size:40px;">✍️</span>`;
+            document.getElementById('resultStatus').innerText = "自主補登時數";
+            document.getElementById('resultDistance').innerHTML = remedyHtml;
+            document.getElementById('resultOverlay').classList.add('show');
+
+            const now = new Date();
+            const localIsoStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            document.getElementById('remedyDateTime').value = localIsoStr;
+        }
+
+        function submitQuotaRemedy() {
+            const srv = document.getElementById('remedyService').value;
+            const checkType = document.querySelector('input[name="remedyCheckType"]:checked').value;
+            const dt = document.getElementById('remedyDateTime').value;
+            if (!srv) { alert("請先選擇服務內容！"); return; }
+            if (!dt) { alert("請選擇補登日期與時間！"); return; }
+
+            document.getElementById('resultOverlay').classList.remove('show');
+            executeCheckIn(srv, checkType, document.getElementById('checkInBtn'), true, dt, "自主補登");
+        }
+        */
+
+        function executeCheckIn(serviceType, checkType, btnElement, isQuotaRemedy = false, customDateTimeStr = "", customRemark = "", shiftInfo = "", forceOverwrite = false) {
             const originalText = btnElement.innerHTML;
             const statusMsg = document.getElementById('statusMsg');
-            btnElement.disabled = true; btnElement.innerText = "定位中...";
-            statusMsg.innerHTML = "正在取得 GPS 定位，請稍候...";
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    statusMsg.innerHTML = "定位成功，資料傳送中...";
-                    fetch(GAS_URL, {
-                        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, 
-                        body: JSON.stringify({ action: "checkIn", userId: currentUserId, lat: pos.coords.latitude, lng: pos.coords.longitude, serviceType: serviceType, checkType: checkType })
-                    }).then(res => res.json()).then(result => {
-                        if (result.status === "success") {
-                            const timeStr = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-                            const distanceInfo = result.distance !== undefined ? `\n📏 距離：${result.distance} 公尺` : "";
-                            const detailMsg = `👤 姓名：${dbUserName}\n📋 服務：${serviceType}\n⏱️ 狀態：${checkType}${distanceInfo}\n⏰ 時間：${timeStr}`;
-                            const mainHtml = `<div style="color: #00B900; font-weight: bold; font-size: 16px; margin-bottom: 10px;">✅ 打卡成功明細</div><div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; font-size: 15px; line-height: 1.8; color: #166534; text-align: left;"><div><b>👤 姓名：</b>${dbUserName}</div><div><b>📋 服務：</b>${serviceType}</div><div><b>⏱️ 狀態：</b>${checkType}</div>${result.distance !== undefined ? `<div><b>📏 距離：</b>${result.distance} 公尺</div>` : ""}<div style="margin-top: 5px; border-top: 1px dashed #86efac; padding-top: 5px;"><b>⏰ 時間：</b><span style="font-weight: bold; font-size: 16px;">${timeStr}</span></div></div>`;
-                            showPopup(true, "打卡成功！", detailMsg); statusMsg.innerHTML = mainHtml; 
-                        } else {
-                            showPopup(false, "打卡失敗", result.message); statusMsg.innerHTML = `<span style="color:#ff4d4f; font-weight:bold;">❌ 打卡失敗：</span><br>${result.message}`;
-                        }
+            btnElement.disabled = true; btnElement.innerText = "處理中...";
+
+            const sendCheckInPayload = (lat, lng) => {
+                statusMsg.innerHTML = "資料傳送中...";
+                fetch(GAS_URL, {
+                    method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+                    body: JSON.stringify({ 
+                        action: "checkIn", userId: currentUserId, lat: lat, lng: lng, 
+                        serviceType: serviceType, checkType: checkType, 
+                        isQuotaRemedy: isQuotaRemedy, customDateTimeStr: customDateTimeStr, remark: customRemark,
+                        shiftInfo: shiftInfo, forceOverwrite: forceOverwrite
+                    })
+                }).then(res => res.json()).then(result => {
+                    if (result.status === "confirm_overwrite") {
                         btnElement.disabled = false; btnElement.innerHTML = originalText;
-                    });
-                },
-                (err) => { showPopup(false, "定位失敗", "請確認手機已開啟位置權限。"); statusMsg.innerHTML = `<span style="color:#ff4d4f; font-weight:bold;">❌ 定位失敗：</span>請確認手機已開啟位置權限。`; btnElement.disabled = false; btnElement.innerHTML = originalText; },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
+                        if (confirm(result.message)) {
+                            executeCheckIn(serviceType, checkType, btnElement, isQuotaRemedy, customDateTimeStr, customRemark, shiftInfo, true);
+                        } else {
+                            statusMsg.innerHTML = "已取消更新簽退時間。";
+                        }
+                        return;
+                    }
+                    if (result.status === "success") {
+                        const timeStr = customDateTimeStr ? customDateTimeStr.replace("T", " ") : new Date().toLocaleTimeString('zh-TW', { hour12: false });
+                        const titleText = checkType === '簽到' ? '✅ 簽到成功！' : '👋 簽退成功！';
+                        const distanceInfo = isQuotaRemedy ? `\n📝 備註：志工自主補登 (當年度第 ${result.usedQuota}/5 次)` : (result.distance !== undefined ? `\n📏 距離：${result.distance} 公尺` : "");
+                        const detailMsg = `👤 姓名：${dbUserName}\n📋 服務：${serviceType}\n⏱️ 狀態：${checkType}${distanceInfo}\n⏰ 時間：${timeStr}`;
+                        
+                        showPopup(true, titleText, detailMsg); 
+                        statusMsg.innerHTML = `<div style="color: #00B900; font-weight: bold; font-size: 16px; margin-bottom: 10px;">${titleText}明細</div><div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; font-size: 15px; line-height: 1.8; color: #166534; text-align: left;"><div><b>👤 姓名：</b>${dbUserName}</div><div><b>📋 服務：</b>${serviceType}</div><div><b>⏱️ 狀態：</b>${checkType}</div>${isQuotaRemedy ? `<div><b>📝 備註：</b>自主補登 (當年度第 ${result.usedQuota}/5 次)</div>` : (result.distance !== undefined ? `<div><b>📏 距離：</b>${result.distance} 公尺</div>` : "")}<div style="margin-top: 5px; border-top: 1px dashed #86efac; padding-top: 5px;"><b>⏰ 時間：</b><span style="font-weight: bold; font-size: 16px;">${timeStr}</span></div></div>`; 
+
+                        // 📍 打卡成功後自動重整畫面
+                        setTimeout(() => { checkBindingStatus(); }, 800);
+                    } else {
+                        const titleText = checkType === '簽到' ? '❌ 簽到失敗' : '❌ 簽退失敗';
+                        let extraTip = "";
+                        if (result.message.indexOf("不在執勤範圍") > -1) {
+                            extraTip = "\n\n💡 小撇步：若您已在館內，請嘗試連線館內 Wi-Fi「tainan」，連線後再試一次打卡，可大幅提高定位精確度！";
+                        }
+                        showPopup(false, titleText, result.message + extraTip); 
+                        statusMsg.innerHTML = `<span style="color:#ff4d4f; font-weight:bold;">${titleText}：</span><br>${result.message}`;
+                    }
+                    btnElement.disabled = false; btnElement.innerHTML = originalText;
+                }).catch(err => {
+                    showPopup(false, "網路連線失敗", "連線失敗，請檢查網路設定後再試一次。");
+                    btnElement.disabled = false; btnElement.innerHTML = originalText;
+                });
+            };
+
+            if (isQuotaRemedy) {
+                sendCheckInPayload(0, 0);
+            } else {
+                const mockCheckbox = document.getElementById('enableMockGps');
+                if (mockCheckbox && mockCheckbox.checked && (globalTitle === "系統管理員" || isViewAsVolunteer)) {
+                    const mockModeInput = document.querySelector('input[name="mockGpsMode"]:checked');
+                    const mockMode = mockModeInput ? mockModeInput.value : 'inside';
+                    const mockLat = mockMode === 'inside' ? 23.0250 : 23.0295;
+                    const mockLng = 120.2378;
+                    const modeLabel = mockMode === 'inside' ? '🎯 範圍內 (0m)' : '❌ 範圍外 (500m)';
+                    statusMsg.innerHTML = `🧪 [虛擬測試模式：${modeLabel}] 傳送座標中...`;
+                    sendCheckInPayload(mockLat, mockLng);
+                } else {
+                    statusMsg.innerHTML = "正在取得 GPS 定位，請稍候...";
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => { sendCheckInPayload(pos.coords.latitude, pos.coords.longitude); },
+                        (err) => { 
+                            btnElement.disabled = false; btnElement.innerHTML = originalText;
+                            if (err.code === 1) {
+                                showGpsPermissionGuideModal();
+                            } else {
+                                showPopup(false, "定位失敗", "請確認手機已開啟位置定位功能。\n\n💡 小撇步：連線館內 Wi-Fi「tainan」可大幅提升精確度唷！"); 
+                                statusMsg.innerHTML = `<span style="color:#ff4d4f; font-weight:bold;">❌ 定位失敗：</span>請確認手機定位已開啟。`; 
+                            }
+                        },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                }
+            }
         }
 
         // --- 館員 UI ---
@@ -464,6 +671,33 @@ function showSmartCheckInUI(titleText, shiftObj) {
             fetchPendingRecords();
         }
 
+        let pendingGroupMode = 'volunteer'; // 'volunteer' 或 'activity'
+        let cachedPendingRecords = [];
+        let activeGroupFilterKey = null; // 📍 用於紀錄當前是否「僅顯示單一活動」
+
+        const groupMorandiThemes = [
+            { bg: '#f0f9ff', border: '#7dd3fc', headerText: '#0369a1', badgeBg: '#0284c7' }, // 天藍莫蘭迪
+            { bg: '#f0fdf4', border: '#86efac', headerText: '#15803d', badgeBg: '#16a34a' }, // 薄荷綠莫蘭迪
+            { bg: '#faf5ff', border: '#c084fc', headerText: '#6b21a8', badgeBg: '#9333ea' }, // 薰衣草紫莫蘭迪
+            { bg: '#fff7ed', border: '#fdba74', headerText: '#c2410c', badgeBg: '#ea580c' }, // 暖橙莫蘭迪
+            { bg: '#fdf2f8', border: '#f472b6', headerText: '#be185d', badgeBg: '#db2777' }, // 玫瑰粉莫蘭迪
+            { bg: '#f1f5f9', border: '#94a3b8', headerText: '#334155', badgeBg: '#475569' }  // 灰藍莫蘭迪
+        ];
+
+        function setPendingGroupMode(mode) {
+            pendingGroupMode = mode;
+            const btnVol = document.getElementById('btnPendingSortVol');
+            const btnAct = document.getElementById('btnPendingSortAct');
+            if (mode === 'volunteer') {
+                btnVol.style.background = "var(--primary-color)"; btnVol.style.color = "white"; btnVol.style.border = "none";
+                btnAct.style.background = "white"; btnAct.style.color = "var(--text-color)"; btnAct.style.border = "1px solid #ccc";
+            } else {
+                btnAct.style.background = "var(--primary-color)"; btnAct.style.color = "white"; btnAct.style.border = "none";
+                btnVol.style.background = "white"; btnVol.style.color = "var(--text-color)"; btnVol.style.border = "1px solid #ccc";
+            }
+            renderPendingRecords();
+        }
+
         function fetchPendingRecords() {
             const container = document.getElementById('adminRecordsContainer');
             container.innerHTML = '<p style="text-align:center; color:gray;">撈取資料中...</p>';
@@ -472,80 +706,225 @@ function showSmartCheckInUI(titleText, shiftObj) {
                 body: JSON.stringify({ action: "getPendingRecords" })
             }).then(res => res.json()).then(result => {
                 if(result.status === "success") {
-                    container.innerHTML = "";
-                    if (result.data.length === 0) { container.innerHTML = '<p style="text-align:center; color:#00B900; font-weight:bold;">🎉 目前沒有待審核的紀錄！</p>'; return; }
-                    
-                    const getOptions = (max, selected) => { let opts = ''; for(let i=0; i<=max; i++) { let val = i.toString().padStart(2, '0'); opts += `<option value="${val}" ${val === selected ? 'selected' : ''}>${val}</option>`; } return opts; };
-
-                    result.data.forEach(record => {
-                        const card = document.createElement('div');
-                        const isSignIn = record.checkType === '簽到';
-                        const borderColorClass = isSignIn ? 'sign-in' : 'sign-out';
-                        card.className = `record-card ${borderColorClass}`;
-                        
-                        const timeLabel = isSignIn ? '簽到時間' : '簽退時間';
-                        const [datePart, timePart] = record.timestamp.split('T');
-                        const displayDate = formatDateWithDay(datePart); 
-                        const [origHour, origMin] = timePart.split(':');
-                        const styles = isSignIn ? { bg: '#f0fdf4', border: '#bbf7d0', text: '#166534', input: '#00B900' } : { bg: '#fff1f0', border: '#ffa39e', text: '#a8071a', input: '#ff4d4f' };
-             
-                        // 📍 簽到時顯示下拉選單與加時，簽退時鎖定隱藏
-                        const serviceHtml = isSignIn 
-                            ? `<label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">📋 服務內容：</label>
-                               <select id="srv_${record.uuid}" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
-                                  <option value="活動支援" ${record.serviceType==="活動支援"?"selected":""}>活動支援</option>
-                                  <option value="五感值班" ${record.serviceType==="五感值班"?"selected":""}>五感值班</option>
-                                  <option value="創客值班" ${record.serviceType==="創客值班"?"selected":""}>創客值班</option>
-                                  <option value="導覽" ${record.serviceType==="導覽"?"selected":""}>導覽</option>
-                               </select>`
-                            : `<input type="hidden" id="srv_${record.uuid}" value="${record.serviceType}">
-                               <div style="font-size:14px; color:#555; background:#f5f5f5; padding:8px; border-radius:6px; border:1px solid #ddd; width:100%; box-sizing:border-box; font-weight:bold;">📍 簽退 (自動同簽到服務：${record.serviceType})</div>`;
-
-                        const defaultMul = (isSignIn && record.autoMultiplier !== undefined) ? record.autoMultiplier : 1;
-                        const defaultExt = (isSignIn && record.autoExtraHours !== undefined) ? record.autoExtraHours : 0;
-                        const defaultRem = isSignIn ? (record.autoRemark || "") : "";
-
-                        const multiplierExtraHtml = isSignIn 
-                            ? `<div style="flex:1;">
-                                   <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">⭐ 加權：</label>
-                                   <input type="number" id="mul_${record.uuid}" value="${defaultMul}" step="0.5" min="1" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
-                               </div>
-                               <div style="flex:1;">
-                                   <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">➕ 加時：</label>
-                                   <input type="number" id="ext_${record.uuid}" value="${defaultExt}" step="0.5" min="0" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
-                               </div>`
-                            : `<input type="hidden" id="mul_${record.uuid}" value="1"><input type="hidden" id="ext_${record.uuid}" value="0">`;
-                            
-                        card.innerHTML = `
-                            <div class="record-title" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleCardCheckbox('${record.uuid}', event)">
-                                <div style="display:flex; align-items:center;">
-                                    <input type="checkbox" class="batch-checkbox" id="cb_${record.uuid}" value="${record.uuid}" style="display:none; transform: scale(1.5); margin-right: 15px; cursor:pointer;" onclick="event.stopPropagation(); updateBatchCount();">
-                                    <span>👤 ${record.volunteerName}</span>
-                                </div>
-                                <span class="record-tag">${record.checkType}</span>
-                            </div>
-                            <div style="font-size:14px; margin-bottom:15px; background: ${styles.bg}; padding: 12px; border-radius: 8px; border: 1px solid ${styles.border}; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
-                                <span style="font-weight:bold; color:${styles.text};">🕒 ${timeLabel}：</span> <span style="color:${styles.text}; margin-right: 5px;">${displayDate}</span>
-                                <div style="display:flex; align-items:center; gap:3px;">
-                                    <select id="hour_${record.uuid}" data-date="${datePart}" style="border: 1px solid ${styles.input}; color: ${styles.input}; font-weight: bold; font-size: 16px; background: white; padding: 4px; border-radius: 6px; cursor: pointer; outline: none;">${getOptions(23, origHour)}</select>
-                                    <span style="font-weight:bold; color:${styles.input};">:</span>
-                                    <select id="min_${record.uuid}" style="border: 1px solid ${styles.input}; color: ${styles.input}; font-weight: bold; font-size: 16px; background: white; padding: 4px; border-radius: 6px; cursor: pointer; outline: none;">${getOptions(59, origMin)}</select>
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:10px; align-items: flex-end; margin-bottom: 10px;">
-                                <div style="flex:1.5;">${serviceHtml}</div>
-                                ${multiplierExtraHtml}
-                            </div>
-                            <div style="margin-bottom: 15px;">
-                                <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">📝 館員備註：</label>
-                                <input type="text" id="rem_${record.uuid}" value="${defaultRem}" placeholder="選填" style="margin:0; padding:8px; width:100%; box-sizing:border-box; border-radius:6px; border:1px solid #ccc;">
-                            </div>
-                            <button class="approve-btn" id="btnApprove_${record.uuid}" onclick="approveRecord('${record.uuid}')">✅ 確認核准</button>
-                        `;
-                        container.appendChild(card);
-                    });
+                    cachedPendingRecords = result.data || [];
+                    renderPendingRecords();
                 }
             });
+        }
+
+        function updateRecordRemark(uuid) {
+            const remInput = document.getElementById(`rem_${uuid}`);
+            const chkAct = document.getElementById(`extAct_${uuid}`);
+            const chkLate = document.getElementById(`extLate_${uuid}`);
+            if (!remInput) return;
+            
+            let remVal = remInput.value || "";
+            if (chkAct && chkAct.checked) {
+                if (remVal.indexOf("(活動延長)") === -1) remVal += (remVal ? " " : "") + "(活動延長)";
+            } else {
+                remVal = remVal.replace(/\(活動延長\)/g, "").trim();
+            }
+            
+            if (chkLate && chkLate.checked) {
+                if (remVal.indexOf("(補班延長)") === -1) remVal += (remVal ? " " : "") + "(補班延長)";
+            } else {
+                remVal = remVal.replace(/\(補班延長\)/g, "").trim();
+            }
+            remInput.value = remVal;
+        }
+
+        function renderPendingRecords() {
+            const container = document.getElementById('adminRecordsContainer');
+            container.innerHTML = "";
+            if (cachedPendingRecords.length === 0) { container.innerHTML = '<p style="text-align:center; color:#00B900; font-weight:bold;">🎉 目前沒有待審核的紀錄！</p>'; return; }
+
+            const getOptions = (max, selected) => { let opts = ''; for(let i=0; i<=max; i++) { let val = i.toString().padStart(2, '0'); opts += `<option value="${val}" ${val === selected ? 'selected' : ''}>${val}</option>`; } return opts; };
+
+            const renderCardHtml = (record) => {
+                const card = document.createElement('div');
+                const isSignIn = record.checkType === '簽到';
+                const borderColorClass = isSignIn ? 'sign-in' : 'sign-out';
+                card.className = `record-card ${borderColorClass}`;
+                
+                const timeLabel = isSignIn ? '簽到時間' : '簽退時間';
+                // 📍 預設帶入後端計算建議之時間 (例如提前簽到調整為表定開始、延後簽退調整為表定結束)
+                const targetTime = record.recommendedTime || record.timestamp;
+                const [datePart, timePart] = targetTime.split('T');
+                const displayDate = formatDateWithDay(datePart); 
+                const [origHour, origMin] = (timePart || "00:00").split(':');
+                const paddedHour = String(origHour).padStart(2, '0');
+                const paddedMin = String(origMin).padStart(2, '0');
+                const styles = isSignIn ? { bg: '#f0fdf4', border: '#bbf7d0', text: '#166534', input: '#00B900' } : { bg: '#fff1f0', border: '#ffa39e', text: '#a8071a', input: '#ff4d4f' };
+     
+                const serviceHtml = isSignIn 
+                    ? `<label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">📋 服務內容：</label>
+                       <select id="srv_${record.uuid}" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
+                          <option value="活動支援" ${record.serviceType==="活動支援"?"selected":""}>活動支援</option>
+                          <option value="五感值班" ${record.serviceType==="五感值班"?"selected":""}>五感值班</option>
+                          <option value="創客值班" ${record.serviceType==="創客值班"?"selected":""}>創客值班</option>
+                          <option value="導覽" ${record.serviceType==="導覽"?"selected":""}>導覽</option>
+                       </select>`
+                    : `<input type="hidden" id="srv_${record.uuid}" value="${record.serviceType}">
+                       <div style="font-size:14px; color:#555; background:#f5f5f5; padding:8px; border-radius:6px; border:1px solid #ddd; width:100%; box-sizing:border-box; font-weight:bold;">📍 簽退 (自動同簽到服務：${record.serviceType})</div>`;
+
+                const defaultMul = (isSignIn && record.autoMultiplier !== undefined) ? record.autoMultiplier : 1;
+                const defaultExt = (isSignIn && record.autoExtraHours !== undefined) ? record.autoExtraHours : 0;
+                const defaultRem = isSignIn ? (record.autoRemark || "") : "";
+
+                const multiplierExtraHtml = isSignIn 
+                    ? `<div style="flex:1;">
+                           <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">⭐ 加權：</label>
+                           <input type="number" id="mul_${record.uuid}" value="${defaultMul}" step="0.5" min="1" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
+                       </div>
+                       <div style="flex:1;">
+                           <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">➕ 加時：</label>
+                           <input type="number" id="ext_${record.uuid}" value="${defaultExt}" step="0.5" min="0" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
+                       </div>`
+                    : `<input type="hidden" id="mul_${record.uuid}" value="1"><input type="hidden" id="ext_${record.uuid}" value="0">`;
+                    
+                const rKey = record.scheduledShiftInfo && record.scheduledShiftInfo !== '當日無排班' ? record.scheduledShiftInfo : `${record.serviceType} (無排班資訊)`;
+                const isCheckedAttr = (activeGroupFilterKey === rKey && isBatchMode) ? 'checked' : '';
+
+                card.innerHTML = `
+                    <div class="record-title" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleCardCheckbox('${record.uuid}', event)">
+                        <div style="display:flex; align-items:center;">
+                            <input type="checkbox" class="batch-checkbox" id="cb_${record.uuid}" value="${record.uuid}" data-checktype="${record.checkType}" style="display:${isBatchMode ? 'inline-block' : 'none'}; transform: scale(1.5); margin-right: 15px; cursor:pointer;" onclick="event.stopPropagation(); updateBatchCount();" ${isCheckedAttr}>
+                            <span>👤 ${record.volunteerName}</span>
+                        </div>
+                        <span class="record-tag">${record.checkType}</span>
+                    </div>
+                    <div style="font-size:13px; color:#0f766e; background:#ccfbf1; border:1px solid #99f6e4; padding:8px 12px; border-radius:6px; margin-bottom:6px; display:flex; align-items:center; gap:5px;">
+                        <span>📅</span> <b>本日排班：</b><span>${record.scheduledShiftInfo || '當日無排班'}</span>
+                    </div>
+                    <div style="font-size:12px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; padding:6px 10px; border-radius:6px; margin-bottom:10px; display:flex; align-items:center; gap:5px;">
+                        <span>📍</span> <b>志工最後打卡時間 (P欄備查)：</b><span>${record.rawTime || record.timestamp.replace('T', ' ')}</span>
+                    </div>
+                    ${record.punchHistory ? `
+                    <details style="margin-bottom:10px; font-size:12px; color:#64748b; background:#f1f5f9; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer;">
+                        <summary style="font-weight:bold; outline:none;">📜 打卡覆寫歷程 (Q欄)</summary>
+                        <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #cbd5e1; font-family:monospace;">${record.punchHistory}</div>
+                    </details>
+                    ` : ''}
+                    <div style="font-size:14px; margin-bottom:12px; background: ${styles.bg}; padding: 12px; border-radius: 8px; border: 1px solid ${styles.border}; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
+                        <span style="font-weight:bold; color:${styles.text};">🕒 ${timeLabel}：</span> <span style="color:${styles.text}; margin-right: 5px;">${displayDate}</span>
+                        <div style="display:flex; align-items:center; gap:3px;">
+                            <select id="hour_${record.uuid}" data-date="${datePart}" style="border: 1px solid ${styles.input}; color: ${styles.input}; font-weight: bold; font-size: 16px; background: white; padding: 4px; border-radius: 6px; cursor: pointer; outline: none;">${getOptions(23, paddedHour)}</select>
+                            <span style="font-weight:bold; color:${styles.input};">:</span>
+                            <select id="min_${record.uuid}" style="border: 1px solid ${styles.input}; color: ${styles.input}; font-weight: bold; font-size: 16px; background: white; padding: 4px; border-radius: 6px; cursor: pointer; outline: none;">${getOptions(59, paddedMin)}</select>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items: flex-end; margin-bottom: 10px;">
+                        <div style="flex:1.5;">${serviceHtml}</div>
+                        ${multiplierExtraHtml}
+                    </div>
+                    ${!isSignIn ? `
+                    <div style="display:flex; gap:12px; margin-bottom:8px; background:#f8fafc; padding:6px 10px; border-radius:6px; border:1px solid #e2e8f0;">
+                        <label style="font-size:13px; font-weight:bold; color:#0284c7; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                            <input type="checkbox" id="extAct_${record.uuid}" onchange="updateRecordRemark('${record.uuid}')"> 認列活動時間延長
+                        </label>
+                        <label style="font-size:13px; font-weight:bold; color:#d97706; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                            <input type="checkbox" id="extLate_${record.uuid}" onchange="updateRecordRemark('${record.uuid}')"> 遲到補班延長
+                        </label>
+                    </div>` : ''}
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">📝 館員備註：</label>
+                        <input type="text" id="rem_${record.uuid}" value="${defaultRem}" placeholder="選填" style="margin:0; padding:8px; width:100%; box-sizing:border-box; border-radius:6px; border:1px solid #ccc;">
+                        <input type="hidden" id="shift_${record.uuid}" value="${record.scheduledShiftInfo || ''}">
+                    </div>
+                    <button class="approve-btn" id="btnApprove_${record.uuid}" onclick="approveRecord('${record.uuid}')" style="display:${isBatchMode ? 'none' : 'block'};">✅ 確認核准</button>
+                `;
+                return card;
+            };
+
+            if (pendingGroupMode === 'volunteer') {
+                cachedPendingRecords.forEach(record => {
+                    container.appendChild(renderCardHtml(record));
+                });
+            } else {
+                // 按活動/班別分組
+                const groups = {};
+                cachedPendingRecords.forEach(record => {
+                    const key = record.scheduledShiftInfo && record.scheduledShiftInfo !== '當日無排班' 
+                        ? record.scheduledShiftInfo 
+                        : `${record.serviceType} (無排班資訊)`;
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(record);
+                });
+
+                let gIdx = 0;
+                for (let key in groups) {
+                    const theme = groupMorandiThemes[gIdx % groupMorandiThemes.length];
+                    gIdx++;
+
+                    const isFilteredOut = activeGroupFilterKey && activeGroupFilterKey !== key;
+                    const groupContainer = document.createElement('div');
+                    groupContainer.style.cssText = `background:${theme.bg}; border:2px solid ${theme.border}; border-radius:12px; padding:15px; margin-bottom:20px; ${isFilteredOut ? 'display:none;' : 'display:block;'}`;
+                    
+                    const isSelectedGroup = activeGroupFilterKey === key;
+                    const btnText = isSelectedGroup ? '↩️ 顯示所有活動' : '☑️ 僅顯示並勾選此活動全體';
+                    const btnBg = isSelectedGroup ? '#334155' : theme.badgeBg;
+
+                    const headerHtml = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:2px solid ${theme.border}; padding-bottom:8px;">
+                            <div style="font-weight:bold; font-size:16px; color:${theme.headerText};">🎪 ${key} <span style="font-size:14px; opacity:0.85; font-weight:normal;">(共 ${groups[key].length} 筆待審核)</span></div>
+                            <button onclick="selectGroupForBatch('${encodeURIComponent(key)}')" style="background:${btnBg}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px;">${btnText}</button>
+                        </div>
+                    `;
+                    groupContainer.innerHTML = headerHtml;
+
+                    if (isSelectedGroup) {
+                        const masterPanel = document.createElement('div');
+                        masterPanel.style.cssText = `background:#ffffff; border:1px dashed ${theme.border}; padding:12px; border-radius:8px; margin-bottom:15px; display:flex; flex-direction:column; gap:10px;`;
+                        masterPanel.innerHTML = `
+                            <div style="font-weight:bold; font-size:14px; color:${theme.headerText};">⚙️ 批次統一設定 <span style="font-weight:normal; font-size:12px;">(僅套用於下方勾選的「簽退」卡片)</span></div>
+                            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                                <label style="font-size:13px; font-weight:bold; color:#0284c7; cursor:pointer; display:flex; align-items:center; gap:4px; background:#f0f9ff; padding:6px 10px; border-radius:6px; border:1px solid #bae6fd;">
+                                    <input type="checkbox" id="masterExtAct"> 統一註記 (活動延長)
+                                </label>
+                                <label style="font-size:13px; font-weight:bold; color:#166534; cursor:pointer; display:flex; align-items:center; gap:4px; background:#f0fdf4; padding:6px 10px; border-radius:6px; border:1px solid #bbf7d0;">
+                                    <input type="checkbox" id="masterOverrideTime" onchange="document.getElementById('masterTimeBox').style.display = this.checked ? 'flex' : 'none';"> 統一修改簽退時間
+                                    <div id="masterTimeBox" style="display:none; align-items:center; gap:5px; margin-left:5px;">
+                                        <select id="masterOutHour" style="border:1px solid #86efac; color:#15803d; font-weight:bold; font-size:14px; padding:2px; border-radius:4px; background:white;">${getOptions(23, '17')}</select>
+                                        <span style="font-weight:bold; color:#166534;">:</span>
+                                        <select id="masterOutMin" style="border:1px solid #86efac; color:#15803d; font-weight:bold; font-size:14px; padding:2px; border-radius:4px; background:white;">${getOptions(59, '00')}</select>
+                                    </div>
+                                </label>
+                            </div>
+                        `;
+                        groupContainer.appendChild(masterPanel);
+                    }
+                    
+                    groups[key].forEach(record => {
+                        groupContainer.appendChild(renderCardHtml(record));
+                    });
+                    container.appendChild(groupContainer);
+                }
+            }
+        }
+
+        function selectGroupForBatch(encodedKey) {
+            const key = decodeURIComponent(encodedKey);
+            
+            // 📍 若點選已篩選的活動按鈕，則切換回顯示全部活動，並連帶退出批次模式
+            if (activeGroupFilterKey === key) {
+                activeGroupFilterKey = null;
+                if (isBatchMode) toggleBatchMode(); // 連帶退出批次模式
+                else renderPendingRecords();
+                updateBatchCount();
+                return;
+            }
+
+            activeGroupFilterKey = key;
+            if (!isBatchMode) toggleBatchMode();
+            
+            cachedPendingRecords.forEach(record => {
+                const rKey = record.scheduledShiftInfo && record.scheduledShiftInfo !== '當日無排班' ? record.scheduledShiftInfo : `${record.serviceType} (無排班資訊)`;
+                const cb = document.getElementById(`cb_${record.uuid}`);
+                if (cb) cb.checked = (rKey === key);
+            });
+
+            renderPendingRecords();
+            updateBatchCount();
         }
 
         function approveRecord(uuid) {
@@ -557,6 +936,8 @@ function showSmartCheckInUI(titleText, shiftObj) {
             const multiplier = document.getElementById(`mul_${uuid}`).value;
             const extraHours = document.getElementById(`ext_${uuid}`).value;
             const remark = document.getElementById(`rem_${uuid}`).value;
+            const shiftInput = document.getElementById(`shift_${uuid}`);
+            const shiftInfo = shiftInput ? shiftInput.value : "";
             
             const btn = event.target; btn.disabled = true; btn.innerText = "處理中...";
             fetch(GAS_URL, {
@@ -564,7 +945,7 @@ function showSmartCheckInUI(titleText, shiftObj) {
                 body: JSON.stringify({ 
                     action: "approveRecord", uuid: uuid, newTime: newTime, 
                     serviceType: serviceType, multiplier: multiplier, extraHours: extraHours,
-                    remark: remark, staffName: dbUserName
+                    remark: remark, staffName: dbUserName, shiftInfo: shiftInfo
                 })
             }).then(res => res.json()).then(result => {
                 if(result.status === "success") fetchPendingRecords(); 
@@ -590,6 +971,14 @@ function showSmartCheckInUI(titleText, shiftObj) {
             const remarkHtml = r.remark ? `<div style="font-size:13px; color:#888; margin-top:5px; border-top:1px dashed #eee; padding-top:5px;">📝 備註：${r.remark}</div>` : "";
             const hoursDisplay = r.multiplier > 1 || r.extraHours > 0 ? `<span style="font-size:13px; color:#888; font-weight:normal; margin-bottom:3px; display:block;">(原始 ${r.rawHours.toFixed(2)})</span>${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>` : `${r.finalHours.toFixed(1)} <span style="font-size:12px;">hr</span>`;
             let nameHtml = showName ? `<div style="font-weight:bold; font-size:16px; margin-bottom:5px;">👤 ${r.volunteerName}</div>` : "";
+            const shiftBadge = r.shiftInfo ? `<div style="font-size:12px; color:#334155; font-weight:bold; background:#f1f5f9; border:1px solid #cbd5e1; display:inline-block; padding:3px 8px; border-radius:10px; margin-bottom:3px;">🗓️ 班別：${r.shiftInfo}</div>` : "";
+            const historyHtml = r.punchHistory ? `
+                <details style="margin-top:5px; font-size:12px; color:#64748b; background:#f1f5f9; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer;">
+                    <summary style="font-weight:bold; outline:none;">📜 打卡覆寫歷程 (Q欄)</summary>
+                    <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #cbd5e1; font-family:monospace;">${r.punchHistory}</div>
+                </details>
+            ` : "";
+
             return `
                 <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 4px solid var(--primary-color);">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; border-bottom: 1px dashed #eee; padding-bottom: 8px;">
@@ -600,8 +989,9 @@ function showSmartCheckInUI(titleText, shiftObj) {
                         <div style="font-weight:bold; color:var(--primary-color); font-size:16px; text-align:right; line-height: 1.2;">${hoursDisplay}</div>
                     </div>
                     <div style="font-size:13px; color:#555; margin-bottom:5px;">⏱️ ${r.startTime} ~ ${r.endTime} &nbsp; 📍 ${r.serviceType} ${multiplierText} ${extraText}</div>
-                    <div style="font-size:12px; color:#00897b; font-weight:bold; background:#e0f2f1; display:inline-block; padding:3px 8px; border-radius:10px;">✅ 確認館員：${r.staffName || '系統'}</div>
+                    <div style="margin-top:5px; display:flex; flex-wrap:wrap; align-items:center; gap:5px;">${shiftBadge}<div style="font-size:12px; color:#00897b; font-weight:bold; background:#e0f2f1; display:inline-block; padding:3px 8px; border-radius:10px; margin-bottom:3px;">✅ 確認館員：${r.staffName || '系統'}</div></div>
                     ${remarkHtml}
+                    ${historyHtml}
                 </div>
             `;
         }
@@ -980,7 +1370,21 @@ function showSmartCheckInUI(titleText, shiftObj) {
         }
 
         function buildDynamicServiceOptions() {
-            const optionsHtml = `<option value="活動支援">活動支援</option><option value="五感值班">五感值班</option><option value="創客值班">創客值班</option><option value="導覽">導覽</option>${isCulturalHoursEnabled ? '<option value="文化時數">文化時數</option>' : ''}`;
+            let baseOptionsHtml = `<option value="活動支援">活動支援</option><option value="五感值班">五感值班</option><option value="創客值班">創客值班</option><option value="導覽">導覽</option>`;
+            if (isCulturalHoursEnabled) {
+                baseOptionsHtml += `<option value="文化時數">文化時數</option>`;
+            }
+
+            let optionsHtml = '';
+            // 若開放手動打卡，則加入常規選項
+            if (isManualCheckInEnabled) {
+                optionsHtml += `<option value="活動支援">活動支援</option><option value="五感值班">五感值班</option><option value="創客值班">創客值班</option><option value="導覽">導覽</option>`;
+            }
+            // 若開放文化時數，則加入該選項
+            if (isCulturalHoursEnabled) {
+                optionsHtml += `<option value="文化時數">文化時數</option>`;
+            }
+
             const serviceSelect = document.getElementById('serviceSelect');
             if (serviceSelect) {
                 const currentVal = serviceSelect.value; serviceSelect.innerHTML = '<option value="" disabled selected>👉 請先選擇本次服務內容</option>' + optionsHtml;
@@ -988,13 +1392,19 @@ function showSmartCheckInUI(titleText, shiftObj) {
             }
             const manualSelect = document.getElementById('manualService');
             if (manualSelect) {
-                const currentManualVal = manualSelect.value; manualSelect.innerHTML = optionsHtml;
+                const currentManualVal = manualSelect.value; manualSelect.innerHTML = baseOptionsHtml;
                 if (manualSelect.querySelector(`option[value="${currentManualVal}"]`)) manualSelect.value = currentManualVal;
             }
             const btn = document.getElementById('btnToggleCultural');
             if (btn) {
                 if (isCulturalHoursEnabled) { btn.innerText = "🛑 關閉文化時數"; btn.style.background = "#ffebee"; btn.style.color = "#c62828"; } 
                 else { btn.innerText = "🎭 開放文化時數"; btn.style.background = "#f3e5f5"; btn.style.color = "#8e24aa"; }
+            }
+
+            const btnManual = document.getElementById('btnToggleManualCheckIn');
+            if (btnManual) {
+                if (isManualCheckInEnabled) { btnManual.innerText = "🛑 關閉手動打卡"; btnManual.style.background = "#ffebee"; btnManual.style.color = "#c62828"; } 
+                else { btnManual.innerText = "✋ 開放手動打卡"; btnManual.style.background = "#e8f5e9"; btnManual.style.color = "#2e7d32"; }
             }
         }
 
@@ -1004,6 +1414,21 @@ function showSmartCheckInUI(titleText, shiftObj) {
             }).then(res => res.json()).then(result => {
                 if(result.status === "success") { isCulturalHoursEnabled = result.newState; buildDynamicServiceOptions(); alert(isCulturalHoursEnabled ? "✅ 已開放「文化時數」！" : "🚫 已關閉「文化時數」！"); } 
                 else { alert("權限不足或操作失敗：" + result.message); buildDynamicServiceOptions(); }
+            }).catch(err => { alert("網路異常：" + err.message); buildDynamicServiceOptions(); });
+        }
+
+        function toggleManualCheckInMode() {
+            const newState = !isManualCheckInEnabled; const btn = document.getElementById('btnToggleManualCheckIn'); btn.innerText = "處理中 ⏳...";
+            fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "toggleManualCheckIn", userId: currentUserId, enable: newState })
+            }).then(res => res.json()).then(result => {
+                if(result.status === "success") { 
+                    isManualCheckInEnabled = result.newState; 
+                    buildDynamicServiceOptions(); 
+                    alert(isManualCheckInEnabled ? "✅ 已開放「手動打卡」！" : "🚫 已關閉「手動打卡」！"); 
+                } else { 
+                    alert("權限不足或操作失敗：" + result.message); 
+                    buildDynamicServiceOptions(); 
+                }
             }).catch(err => { alert("網路異常：" + err.message); buildDynamicServiceOptions(); });
         }
 
@@ -1019,6 +1444,8 @@ function showSmartCheckInUI(titleText, shiftObj) {
                 checkboxes.forEach(cb => { cb.style.display = 'inline-block'; cb.checked = false; }); individualBtns.forEach(b => b.style.display = 'none'); 
                 submitBatchBtn.style.display = 'block'; updateBatchCount();
             } else {
+                activeGroupFilterKey = null; // 📍 退出批次時還原顯示所有活動
+                renderPendingRecords();
                 btn.innerText = "☑️ 批次審核"; btn.style.background = "#e3f2fd"; btn.style.color = "#1565c0";
                 checkboxes.forEach(cb => cb.style.display = 'none'); individualBtns.forEach(b => b.style.display = 'block'); submitBatchBtn.style.display = 'none';
             }
@@ -1038,16 +1465,43 @@ function showSmartCheckInUI(titleText, shiftObj) {
 
         function submitBatchApprove() {
             const checkboxes = document.querySelectorAll('.batch-checkbox:checked'); if (checkboxes.length === 0) return;
+            
+            // 📍 抓取全域設定 (如果有出現的話)
+            const masterExtAct = document.getElementById('masterExtAct');
+            const isMasterExtActChecked = masterExtAct ? masterExtAct.checked : false;
+            const masterOverrideTime = document.getElementById('masterOverrideTime');
+            const isMasterTimeChecked = masterOverrideTime ? masterOverrideTime.checked : false;
+            const mHour = document.getElementById('masterOutHour') ? document.getElementById('masterOutHour').value : "";
+            const mMin = document.getElementById('masterOutMin') ? document.getElementById('masterOutMin').value : "";
+
             const records = [];
             checkboxes.forEach(cb => {
-                const uuid = cb.value; const hourSelect = document.getElementById(`hour_${uuid}`); const minSelect = document.getElementById(`min_${uuid}`);
-                const datePart = hourSelect.getAttribute('data-date'); const newTime = `${datePart}T${hourSelect.value}:${minSelect.value}`;
+                const uuid = cb.value;
+                const checkType = cb.getAttribute('data-checktype');
+                
+                let hVal = document.getElementById(`hour_${uuid}`).value;
+                let mVal = document.getElementById(`min_${uuid}`).value;
+                let remark = document.getElementById(`rem_${uuid}`).value || "";
+                
+                // 📍 套用統一簽退設定 (僅限簽退卡片)
+                if (checkType === "簽退") {
+                    if (isMasterExtActChecked && remark.indexOf("(活動延長)") === -1) {
+                        remark += (remark ? " " : "") + "(活動延長)";
+                    }
+                    if (isMasterTimeChecked && mHour && mMin) {
+                        hVal = mHour;
+                        mVal = mMin;
+                    }
+                }
+                
+                const datePart = document.getElementById(`hour_${uuid}`).getAttribute('data-date'); 
+                const newTime = `${datePart}T${hVal}:${mVal}`;
                 
                 const srvInput = document.getElementById(`srv_${uuid}`); const serviceType = srvInput ? srvInput.value : "";
                 const mulInput = document.getElementById(`mul_${uuid}`); const multiplier = mulInput ? mulInput.value : 1; 
                 const extInput = document.getElementById(`ext_${uuid}`); const extraHours = extInput ? extInput.value : 0;
-                const remark = document.getElementById(`rem_${uuid}`).value;
-                records.push({ uuid, newTime, serviceType, multiplier, extraHours, remark });
+                const shiftInput = document.getElementById(`shift_${uuid}`); const shiftInfo = shiftInput ? shiftInput.value : "";
+                records.push({ uuid, newTime, serviceType, multiplier, extraHours, remark, shiftInfo });
             });
             const btn = document.getElementById('submitBatchBtn'); btn.disabled = true; btn.innerText = "批次處理中 ⏳...";
             fetch(GAS_URL, {
