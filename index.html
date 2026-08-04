@@ -141,11 +141,6 @@
                     <button class="checkin-btn" id="checkInBtn">
                         <span style="font-size: 40px;">📍</span><span id="checkInBtnText">點我打卡</span>
                     </button>
-                    <!-- 暫時停用「自主補登」前台按鈕
-                    <button onclick="openQuotaRemedyModal()" style="margin-top:15px; width:100%; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; gap:6px;">
-                        <span>✍️</span> 自主補登時數 (免定位/每年限5次，已使用 <span id="usedQuotaBadge">0</span>/5 次)
-                    </button>
-                    -->
                 </div>
             </div>
 
@@ -529,54 +524,6 @@
             document.getElementById('resultOverlay').classList.add('show');
         }
 
-        /* 暫時停用自主補登彈窗邏輯
-        function openQuotaRemedyModal() {
-            if (globalUsedQuota >= 5) {
-                alert("⛔ 您今年的 5 次自主補登額度已用完。\n如有補登需求，請親洽館員由後台協助人工補登。");
-                return;
-            }
-            const remedyHtml = `
-                <div style="text-align:left; font-size:14px; color:#333;">
-                    <div style="background:#e0f2f1; padding:10px; border-radius:8px; border-left:4px solid #00897b; margin-bottom:12px; font-size:13px; color:#004d40;">
-                        💡 <b>親愛的志工夥伴您好：</b><br>
-                        每年享有 5 次免定位自主補登額度（目前已使用 <b>${globalUsedQuota}</b>/5 次）。請填寫實際執勤之日期與時間：
-                    </div>
-                    <label style="font-weight:bold; display:block; margin-bottom:4px;">📋 服務內容：</label>
-                    <select id="remedyService" style="width:100%; padding:8px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;">
-                       ${document.getElementById('serviceSelect').innerHTML}
-                    </select>
-                    <label style="font-weight:bold; display:block; margin-bottom:4px;">⏱️ 打卡類別：</label>
-                    <div style="display:flex; gap:15px; margin-bottom:10px;">
-                       <label><input type="radio" name="remedyCheckType" value="簽到" checked> 簽到</label>
-                       <label><input type="radio" name="remedyCheckType" value="簽退"> 簽退</label>
-                    </div>
-                    <label style="font-weight:bold; display:block; margin-bottom:4px;">📅 補登日期與時間：</label>
-                    <input type="datetime-local" id="remedyDateTime" style="width:100%; padding:8px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box;">
-                    <button class="bind-btn" style="background:#00B900; width:100%; padding:12px;" onclick="submitQuotaRemedy()">✅ 確認自主補登</button>
-                </div>
-            `;
-            document.getElementById('resultIcon').innerHTML = `<span style="font-size:40px;">✍️</span>`;
-            document.getElementById('resultStatus').innerText = "自主補登時數";
-            document.getElementById('resultDistance').innerHTML = remedyHtml;
-            document.getElementById('resultOverlay').classList.add('show');
-
-            const now = new Date();
-            const localIsoStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            document.getElementById('remedyDateTime').value = localIsoStr;
-        }
-
-        function submitQuotaRemedy() {
-            const srv = document.getElementById('remedyService').value;
-            const checkType = document.querySelector('input[name="remedyCheckType"]:checked').value;
-            const dt = document.getElementById('remedyDateTime').value;
-            if (!srv) { alert("請先選擇服務內容！"); return; }
-            if (!dt) { alert("請選擇補登日期與時間！"); return; }
-
-            document.getElementById('resultOverlay').classList.remove('show');
-            executeCheckIn(srv, checkType, document.getElementById('checkInBtn'), true, dt, "自主補登");
-        }
-        */
-
         function executeCheckIn(serviceType, checkType, btnElement, isQuotaRemedy = false, customDateTimeStr = "", customRemark = "", shiftInfo = "", forceOverwrite = false) {
             const originalText = btnElement.innerHTML;
             const statusMsg = document.getElementById('statusMsg');
@@ -611,7 +558,6 @@
                         showPopup(true, titleText, detailMsg); 
                         statusMsg.innerHTML = `<div style="color: #00B900; font-weight: bold; font-size: 16px; margin-bottom: 10px;">${titleText}明細</div><div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; font-size: 15px; line-height: 1.8; color: #166534; text-align: left;"><div><b>👤 姓名：</b>${dbUserName}</div><div><b>📋 服務：</b>${serviceType}</div><div><b>⏱️ 狀態：</b>${checkType}</div>${isQuotaRemedy ? `<div><b>📝 備註：</b>自主補登 (當年度第 ${result.usedQuota}/5 次)</div>` : (result.distance !== undefined ? `<div><b>📏 距離：</b>${result.distance} 公尺</div>` : "")}<div style="margin-top: 5px; border-top: 1px dashed #86efac; padding-top: 5px;"><b>⏰ 時間：</b><span style="font-weight: bold; font-size: 16px;">${timeStr}</span></div></div>`; 
 
-                        // 📍 打卡成功後自動重整畫面
                         setTimeout(() => { checkBindingStatus(); }, 800);
                     } else {
                         const titleText = checkType === '簽到' ? '❌ 簽到失敗' : '❌ 簽退失敗';
@@ -660,7 +606,6 @@
             }
         }
 
-        // --- 館員 UI ---
         function setupAdminUI(group, title) {
             switchSection(document.getElementById('sectionAdmin'));
             document.getElementById('systemSubtitle').innerText = "館員管理中心"; document.getElementById('staffName').innerText = "您好，" + dbUserName;
@@ -671,17 +616,17 @@
             fetchPendingRecords();
         }
 
-        let pendingGroupMode = 'volunteer'; // 'volunteer' 或 'activity'
+        let pendingGroupMode = 'volunteer';
         let cachedPendingRecords = [];
-        let activeGroupFilterKey = null; // 📍 用於紀錄當前是否「僅顯示單一活動」
+        let activeGroupFilterKey = null;
 
         const groupMorandiThemes = [
-            { bg: '#f0f9ff', border: '#7dd3fc', headerText: '#0369a1', badgeBg: '#0284c7' }, // 天藍莫蘭迪
-            { bg: '#f0fdf4', border: '#86efac', headerText: '#15803d', badgeBg: '#16a34a' }, // 薄荷綠莫蘭迪
-            { bg: '#faf5ff', border: '#c084fc', headerText: '#6b21a8', badgeBg: '#9333ea' }, // 薰衣草紫莫蘭迪
-            { bg: '#fff7ed', border: '#fdba74', headerText: '#c2410c', badgeBg: '#ea580c' }, // 暖橙莫蘭迪
-            { bg: '#fdf2f8', border: '#f472b6', headerText: '#be185d', badgeBg: '#db2777' }, // 玫瑰粉莫蘭迪
-            { bg: '#f1f5f9', border: '#94a3b8', headerText: '#334155', badgeBg: '#475569' }  // 灰藍莫蘭迪
+            { bg: '#f0f9ff', border: '#7dd3fc', headerText: '#0369a1', badgeBg: '#0284c7' },
+            { bg: '#f0fdf4', border: '#86efac', headerText: '#15803d', badgeBg: '#16a34a' },
+            { bg: '#faf5ff', border: '#c084fc', headerText: '#6b21a8', badgeBg: '#9333ea' },
+            { bg: '#fff7ed', border: '#fdba74', headerText: '#c2410c', badgeBg: '#ea580c' },
+            { bg: '#fdf2f8', border: '#f472b6', headerText: '#be185d', badgeBg: '#db2777' },
+            { bg: '#f1f5f9', border: '#94a3b8', headerText: '#334155', badgeBg: '#475569' }
         ];
 
         function setPendingGroupMode(mode) {
@@ -700,17 +645,32 @@
 
         function fetchPendingRecords() {
             const container = document.getElementById('adminRecordsContainer');
-            container.innerHTML = '<p style="text-align:center; color:gray;">撈取資料中...</p>';
+            container.innerHTML = '<p style="text-align:center; color:gray;">撈取資料中 ⏳...</p>';
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
             fetch(GAS_URL, {
-                method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: "getPendingRecords" })
+                method: "POST", 
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "getPendingRecords" }),
+                signal: controller.signal
             }).then(res => res.json()).then(result => {
+                clearTimeout(timeoutId);
                 if(result.status === "success") {
                     cachedPendingRecords = result.data || [];
                     renderPendingRecords();
+                } else {
+                    container.innerHTML = `<p style="text-align:center; color:#dc2626;">⚠️ 載入失敗：${result.message}</p>`;
                 }
+            }).catch(err => {
+                clearTimeout(timeoutId);
+                container.innerHTML = `
+                    <div style="text-align:center; padding:20px; color:#c62828;">
+                        <p>⚠️ 網路連線逾時或系統忙碌中。</p>
+                        <button onclick="fetchPendingRecords()" style="background:#00B900; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">🔄 重新載入</button>
+                    </div>
+                `;
             });
-        }
 
         function updateRecordRemark(uuid) {
             const remInput = document.getElementById(`rem_${uuid}`);
@@ -747,7 +707,6 @@
                 card.className = `record-card ${borderColorClass}`;
                 
                 const timeLabel = isSignIn ? '簽到時間' : '簽退時間';
-                // 📍 預設帶入後端計算建議之時間 (例如提前簽到調整為表定開始、延後簽退調整為表定結束)
                 const targetTime = record.recommendedTime || record.timestamp;
                 const [datePart, timePart] = targetTime.split('T');
                 const displayDate = formatDateWithDay(datePart); 
@@ -841,7 +800,6 @@
                     container.appendChild(renderCardHtml(record));
                 });
             } else {
-                // 按活動/班別分組
                 const groups = {};
                 cachedPendingRecords.forEach(record => {
                     const key = record.scheduledShiftInfo && record.scheduledShiftInfo !== '當日無排班' 
@@ -905,10 +863,9 @@
         function selectGroupForBatch(encodedKey) {
             const key = decodeURIComponent(encodedKey);
             
-            // 📍 若點選已篩選的活動按鈕，則切換回顯示全部活動，並連帶退出批次模式
             if (activeGroupFilterKey === key) {
                 activeGroupFilterKey = null;
-                if (isBatchMode) toggleBatchMode(); // 連帶退出批次模式
+                if (isBatchMode) toggleBatchMode();
                 else renderPendingRecords();
                 updateBatchCount();
                 return;
@@ -964,7 +921,6 @@
         }
         initializeApp();
 
-        // 共用卡片產生器 (月度/年度/志工/館員通用)
         function generateRecordCardHtml(r, showName = false) {
             const extraText = r.extraHours > 0 ? `<span style="color:#059669; font-size:12px; font-weight:bold; background:#d1fae5; padding:2px 6px; border-radius:4px; margin-left:5px;">➕加時 +${r.extraHours}</span>` : "";
             const multiplierText = r.multiplier > 1 ? `<span style="color:#d97706; font-size:12px; font-weight:bold; background:#fef3c7; padding:2px 6px; border-radius:4px; margin-left:5px;">⭐x${r.multiplier}</span>` : "";
@@ -996,9 +952,6 @@
             `;
         }
 
-        // ==========================================
-        // 志工服務紀錄查詢邏輯
-        // ==========================================
         let allVolunteerRecords = [];
         function openRecordsUI() {
             switchSection(document.getElementById('sectionRecords'));
@@ -1069,16 +1022,12 @@
                     container.innerHTML += `<div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid #d97706;"><div style="font-weight:bold; font-size:16px;">📅 ${month} 月份結算</div><div style="font-weight:bold; color:#d97706; font-size:18px;">${monthlySums[ym].toFixed(1)} <span style="font-size:13px;">hr</span></div></div>`;
                 });
                 
-                // 📍 附加所有年度明細列表
                 container.innerHTML += `<div style="margin-top:20px; font-weight:bold; color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:5px; margin-bottom:10px;">年度明細列表</div>`;
                 filteredRecords.forEach(r => { container.innerHTML += generateRecordCardHtml(r, false); });
             }
             document.getElementById('yearlyTotalHours').innerText = yearTotal.toFixed(1);
         }
 
-        // ==========================================
-        // 館員全體差勤查詢與報表匯出邏輯
-        // ==========================================
         let allAdminQueryRecords = []; let globalRoster = []; let currentAdminQueryTab = 'monthly';
         function openAdminQueryUI(from = 'admin') {
             switchSection(document.getElementById('sectionAdminQuery'));
@@ -1099,7 +1048,6 @@
                 if(result.status === "success") {
                     allAdminQueryRecords = result.data; globalRoster = result.roster; 
                     
-                    // 📍 拆分複數組別
                     let groupSet = new Set();
                     globalRoster.forEach(v => {
                         if(v.group) { v.group.split(/[、,，]/).forEach(g => { const trimmed = g.trim(); if(trimmed) groupSet.add(trimmed); }); }
@@ -1137,7 +1085,6 @@
             const volSelect = document.getElementById('adminVolSelector');
             
             let filteredRoster = globalRoster;
-            // 📍 比對包含字串即可，以支援被拆分的複數組別
             if (selectedGroup !== "ALL") filteredRoster = filteredRoster.filter(v => v.group && v.group.includes(selectedGroup));
             if (keyword !== "") {
                 filteredRoster = filteredRoster.filter(v => {
@@ -1215,7 +1162,6 @@
                         container.innerHTML += `<div style="background: white; padding: 15px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; border-left: 4px solid #d97706;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-weight:bold; font-size:15px;">📅 ${titleText}</div><div style="font-weight:bold; color:#d97706; font-size:18px;">${monthlySums[ym].toFixed(1)} <span style="font-size:13px;">hr</span></div></div><div style="font-size:13px; color:#777; margin-top:5px; padding-top:5px; border-top:1px dashed #eee;">📊 明細：${monthBreakdown}</div></div>`;
                     });
 
-                    // 📍 附加所有年度明細列表
                     container.innerHTML += `<div style="margin-top:20px; font-weight:bold; color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:5px; margin-bottom:10px;">年度明細列表</div>`;
                     filtered.forEach(r => { container.innerHTML += generateRecordCardHtml(r, true); });
                 }
@@ -1300,9 +1246,6 @@
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
-        // ==========================================
-        // 館員補登專用邏輯
-        // ==========================================
         let manualRoster = [];
         function openManualEntryUI() {
             switchSection(document.getElementById('sectionManualEntry'));
@@ -1378,11 +1321,9 @@
             }
 
             let optionsHtml = '';
-            // 若開放手動打卡，則加入常規選項
             if (isManualCheckInEnabled) {
                 optionsHtml += `<option value="活動支援">活動支援</option><option value="五感值班">五感值班</option><option value="創客值班">創客值班</option><option value="導覽">導覽</option>`;
             }
-            // 若開放文化時數，則加入該選項
             if (isCulturalHoursEnabled) {
                 optionsHtml += `<option value="文化時數">文化時數</option>`;
             }
@@ -1439,9 +1380,6 @@
             }).catch(err => { alert("網路異常：" + err.message); buildDynamicServiceOptions(); });
         }
 
-        // ==========================================
-        // 館員批次審核邏輯
-        // ==========================================
         let isBatchMode = false;
         function toggleBatchMode() {
             isBatchMode = !isBatchMode; const btn = document.getElementById('btnBatchMode');
@@ -1451,7 +1389,7 @@
                 checkboxes.forEach(cb => { cb.style.display = 'inline-block'; cb.checked = false; }); individualBtns.forEach(b => b.style.display = 'none'); 
                 submitBatchBtn.style.display = 'block'; updateBatchCount();
             } else {
-                activeGroupFilterKey = null; // 📍 退出批次時還原顯示所有活動
+                activeGroupFilterKey = null;
                 renderPendingRecords();
                 btn.innerText = "☑️ 批次審核"; btn.style.background = "#e3f2fd"; btn.style.color = "#1565c0";
                 checkboxes.forEach(cb => cb.style.display = 'none'); individualBtns.forEach(b => b.style.display = 'block'); submitBatchBtn.style.display = 'none';
@@ -1473,7 +1411,6 @@
         function submitBatchApprove() {
             const checkboxes = document.querySelectorAll('.batch-checkbox:checked'); if (checkboxes.length === 0) return;
             
-            // 📍 抓取全域設定 (如果有出現的話)
             const masterExtAct = document.getElementById('masterExtAct');
             const isMasterExtActChecked = masterExtAct ? masterExtAct.checked : false;
             const masterOverrideTime = document.getElementById('masterOverrideTime');
@@ -1490,7 +1427,6 @@
                 let mVal = document.getElementById(`min_${uuid}`).value;
                 let remark = document.getElementById(`rem_${uuid}`).value || "";
                 
-                // 📍 套用統一簽退設定 (僅限簽退卡片)
                 if (checkType === "簽退") {
                     if (isMasterExtActChecked && remark.indexOf("(活動延長)") === -1) {
                         remark += (remark ? " " : "") + "(活動延長)";
@@ -1523,7 +1459,6 @@
                 fetchPendingRecords();
             });
         }
-        
     </script>
 </body>
 </html>
