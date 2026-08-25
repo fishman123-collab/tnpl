@@ -1557,11 +1557,25 @@
                 serviceSelect.value = "活動支援";
             }
 
-            // 自動嘗試解析時間 (支援單班與連班合併字串，取最前起始與最後結束)
-            const allTimes = shiftVal.match(/(\d{1,2}:\d{2})/g);
-            if (allTimes && allTimes.length >= 2) {
-                const startTimeStr = allTimes[0];
-                const endTimeStr = allTimes[allTimes.length - 1];
+            // 自動嘗試解析時間 (支援單班、連班合併字串，以及上午/下午創客值班)
+            let startTimeStr = "";
+            let endTimeStr = "";
+
+            if (shiftVal.includes("上午創客值班")) {
+                startTimeStr = "09:00";
+                endTimeStr = "12:00";
+            } else if (shiftVal.includes("下午創客值班")) {
+                startTimeStr = "14:00";
+                endTimeStr = "17:00";
+            } else {
+                const allTimes = shiftVal.match(/(\d{1,2}:\d{2})/g);
+                if (allTimes && allTimes.length >= 2) {
+                    startTimeStr = allTimes[0];
+                    endTimeStr = allTimes[allTimes.length - 1];
+                }
+            }
+
+            if (startTimeStr && endTimeStr) {
                 const checkTypeRadio = document.querySelector('input[name="manualCheckType"]:checked');
                 const checkType = checkTypeRadio ? checkTypeRadio.value : "簽到";
                 if (checkType === "整班補登") {
