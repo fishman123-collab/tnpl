@@ -340,7 +340,7 @@
         let isCulturalHoursEnabled = false;
         let isManualCheckInEnabled = false;
         const LIFF_ID = "2008914129-7KGP9Yxy"; 
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwbnCirrFwG8mt7CBFbOP-_HMlzgBiA9d08iZYMHHjyAnRo2hrPII77qPWFX7s_3mAO/exec";  
 
         let currentUserId = ""; let currentLineName = ""; let dbUserName = ""; let globalGroup = ""; let globalTitle = ""; 
         let currentSmartShift = null; 
@@ -1022,18 +1022,25 @@
         }
 
         function approveRecord(uuid) {
-            const hourSelect = document.getElementById(`hour_${uuid}`); const minSelect = document.getElementById(`min_${uuid}`);
+            const hourSelect = document.getElementById(`hour_${uuid}`); 
+            const minSelect = document.getElementById(`min_${uuid}`);
+            if (!hourSelect || !minSelect) {
+                alert("找不到時間選擇元件，請重新整理頁面！");
+                return;
+            }
             const datePart = hourSelect.getAttribute('data-date'); 
             const newTime = `${datePart}T${hourSelect.value}:${minSelect.value}`; 
             
-            const serviceType = document.getElementById(`srv_${uuid}`).value;
-            const multiplier = document.getElementById(`mul_${uuid}`).value;
-            const extraHours = document.getElementById(`ext_${uuid}`).value;
-            const remark = document.getElementById(`rem_${uuid}`).value;
+            const serviceType = document.getElementById(`srv_${uuid}`) ? document.getElementById(`srv_${uuid}`).value : "志工服務";
+            const multiplier = document.getElementById(`mul_${uuid}`) ? document.getElementById(`mul_${uuid}`).value : 1;
+            const extraHours = document.getElementById(`ext_${uuid}`) ? document.getElementById(`ext_${uuid}`).value : 0;
+            const remark = document.getElementById(`rem_${uuid}`) ? document.getElementById(`rem_${uuid}`).value : "";
             const shiftInput = document.getElementById(`shift_${uuid}`);
             const shiftInfo = shiftInput ? shiftInput.value : "";
             
-            const btn = event.target; btn.disabled = true; btn.innerText = "處理中...";
+            const btn = document.getElementById(`btnApprove_${uuid}`);
+            if (btn) { btn.disabled = true; btn.innerText = "處理中..."; }
+
             fetch(GAS_URL, {
                 method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ 
@@ -1042,8 +1049,15 @@
                     remark: remark, staffName: dbUserName, shiftInfo: shiftInfo
                 })
             }).then(res => res.json()).then(result => {
-                if(result.status === "success") fetchPendingRecords(); 
-                else { alert(result.message); btn.disabled = false; btn.innerText = "✅ 確認核准"; }
+                if (result.status === "success") {
+                    fetchPendingRecords(); 
+                } else { 
+                    alert("審核未成功：" + (result.message || "未知錯誤")); 
+                    if (btn) { btn.disabled = false; btn.innerText = "✅ 確認核准"; }
+                }
+            }).catch(err => {
+                alert("網路或伺服器連線異常：" + err);
+                if (btn) { btn.disabled = false; btn.innerText = "✅ 確認核准"; }
             });
         }
 
@@ -1567,24 +1581,42 @@
                     document.getElementById('manualMin').value = m.padStart(2, '0');
                 }
 
-                // 🌟 智慧判定：五感假日 1.5 倍 / 平日最後一班自動帶入 +0.5h 加時與備註
+                // 🌟 智慧判定：五感假日 1.5 倍 / 連上班自動帶入備註 / 平日最後一班自動帶入 +0.5h 加時與備註
                 const dateStr = document.getElementById('manualDate').value;
                 if (dateStr && shiftVal.includes("五感")) {
                     const dateObj = new Date(dateStr.replace(/-/g, '/'));
                     const dayOfWeek = dateObj.getDay(); // 0: 週日, 1-5: 週一至週五, 6: 週六
+                    const hasShift1 = shiftVal.includes("8:45") || shiftVal.includes("08:45");
+                    const hasShift2 = shiftVal.includes("9:30") || shiftVal.includes("09:30");
+                    const hasShift3 = shiftVal.includes("13:45");
+                    const hasShift4 = shiftVal.includes("14:30") || shiftVal.includes("17:30");
+                    const isContinuous12 = hasShift1 && hasShift2;
+                    const isContinuous34 = hasShift3 && hasShift4;
+
                     if (dayOfWeek === 0 || dayOfWeek === 6) {
                         document.getElementById('manualMultiplier').value = "1.5";
                         document.getElementById('manualExtraHours').value = "0";
-                        document.getElementById('manualRemark').value = "五感假日1.5倍";
+                        if (isContinuous12) {
+                            document.getElementById('manualRemark').value = "五感假日1.5倍，連上第一、二段";
+                        } else if (isContinuous34) {
+                            document.getElementById('manualRemark').value = "五感假日1.5倍，(連上第三、四段)";
+                        } else {
+                            document.getElementById('manualRemark').value = "五感假日1.5倍";
+                        }
                     } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-                        if (shiftVal.includes("17:30") || shiftVal.includes("14:30")) {
-                            document.getElementById('manualMultiplier').value = "1";
+                        document.getElementById('manualMultiplier').value = "1";
+                        if (isContinuous12) {
+                            document.getElementById('manualExtraHours').value = "0";
+                            document.getElementById('manualRemark').value = "連上第一、二段";
+                        } else if (isContinuous34) {
                             document.getElementById('manualExtraHours').value = "0.5";
-                            if (shiftVal.includes("13:45") || shiftVal.includes("16:45")) {
-                                document.getElementById('manualRemark').value = "平日第四段班+0.5h，(連上第三、四段)";
-                            } else {
-                                document.getElementById('manualRemark').value = "平日第四段班+0.5h";
-                            }
+                            document.getElementById('manualRemark').value = "平日第四段班+0.5h，(連上第三、四段)";
+                        } else if (hasShift4) {
+                            document.getElementById('manualExtraHours').value = "0.5";
+                            document.getElementById('manualRemark').value = "平日第四段班+0.5h";
+                        } else {
+                            document.getElementById('manualExtraHours').value = "0";
+                            document.getElementById('manualRemark').value = "";
                         }
                     }
                 }
