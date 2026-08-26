@@ -853,10 +853,10 @@
                 const serviceHtml = isSignIn 
                     ? `<label style="font-size:13px; font-weight:bold; display:block; margin-bottom:5px;">📋 服務內容：</label>
                        <select id="srv_${record.uuid}" style="margin:0; padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; box-sizing:border-box;">
-                          <option value="活動支援" ${record.serviceType==="活動支援"?"selected":""}>活動支援</option>
-                          <option value="五感值班" ${record.serviceType==="五感值班"?"selected":""}>五感值班</option>
-                          <option value="創客值班" ${record.serviceType==="創客值班"?"selected":""}>創客值班</option>
-                          <option value="導覽" ${record.serviceType==="導覽"?"selected":""}>導覽</option>
+                          <option value="活動支援" ${(!record.serviceType || record.serviceType==="活動支援")?"selected":""}>活動支援</option>
+                          <option value="五感值班" ${(record.serviceType==="五感值班" || (record.serviceType && record.serviceType.includes("五感")))?"selected":""}>五感值班</option>
+                          <option value="創客值班" ${(record.serviceType==="創客值班" || (record.serviceType && record.serviceType.includes("創客")))?"selected":""}>創客值班</option>
+                          <option value="導覽" ${(record.serviceType==="導覽" || (record.serviceType && record.serviceType.includes("導覽")))?"selected":""}>導覽</option>
                        </select>`
                     : `<input type="hidden" id="srv_${record.uuid}" value="${record.serviceType}">
                        <div style="font-size:14px; color:#555; background:#f5f5f5; padding:8px; border-radius:6px; border:1px solid #ddd; width:100%; box-sizing:border-box; font-weight:bold;">📍 簽退 (自動同簽到服務：${record.serviceType})</div>`;
